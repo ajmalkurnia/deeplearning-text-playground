@@ -1,6 +1,7 @@
 from keras.layers import Layer, Embedding, Dense, Concatenate, Dot, Activation
 from keras.layers import Dropout, LayerNormalization
-from keras.models import Sequential
+from keras.layers import Input, GlobalAveragePooling1D
+from keras.models import Sequential, Model
 from keras import backend as K
 from model.base_classifier import BaseClassifier
 import keras
@@ -78,12 +79,12 @@ class TransformerBlock(Layer):
         return self.fcn_layer_norm(mha_out + fcn_out)
 
 
-class TransformersEmbedding(Layer):
+class TransformerEmbedding(Layer):
     def __init__(
         self, maxlen, vocab_size, embed_dim, token_embed_matrix=None,
         pos_embedding_init=True
     ):
-        super(TransformersEmbedding, self).__init__()
+        super(TransformerEmbedding, self).__init__()
         if token_embed_matrix is None:
             token_initializer = 'glorot_uniform'
         else:
@@ -125,8 +126,72 @@ class TransformersEmbedding(Layer):
 
 
 class TransformerClassifier(BaseClassifier):
-    # TODO: Implement the classifier
-    def __init__(): pass
-    def init_model(): pass
-    def get_class_param(): pass
-    def load_class_param(): pass
+    # TODO: Test the classifier
+    def __init__(
+        self, n_blocks, dim_ff, dropout, n_heads, attention_dim,
+        pos_embedding_init=True, fcn=[(128, 0.1, "relu")], **kwargs
+    ):
+        super(TransformerClassifier, self).__init__(**kwargs)
+        self.n_blocks = n_blocks
+        self.dim_ff = dim_ff
+        self.dropout = dropout
+        self.n_heads = n_heads
+        self.attention_dim = attention_dim
+        self.pos_embedding_init = pos_embedding_init
+        self.fcn = fcn
+
+    def init_model(self):
+        input_layer = Input(shape=(self.max_input, ))
+        self.model = TransformerEmbedding(
+            self.max_input, self.vocab_size, self.attention_dim,
+            self.embedding, self.pos_embedding_init
+        )(input_layer)
+        for _ in range(self.n_blocks):
+            self.model = TransformerBlock(
+                self.dim_ff, self.dropout, self.n_heads, self.attention_dim
+            )(self.model)
+        self.model = GlobalAveragePooling1D()(self.model)
+        self.model = Dropout(self.dropout)(self.model)
+        for units, do_rate, activation in self.fcn:
+            self.model = Dense(self.units, activation=activation)(self.model)
+            self.model = Dropout(do_rate)(self.model)
+        output = Dense(self.n_label, "softmax")(self.model)
+        self.model = Model(inputs=input_layer, output=output)
+        self.model.compile(
+            optimizer=self.optimizer, loss=self.loss, metrics=["accuracy"]
+        )
+        self.model.summary()
+
+    def get_class_param(self):
+        return {
+            "input_size": self.max_input,
+            "l2i": self.label2idx,
+            "i2l": self.idx2label,
+            "vocab": self.vocab,
+            "embedding_size": self.embedding_size,
+            "optimizer": self.optimizer,
+            "loss": self.loss,
+            "dropout": self.dropout,
+            "n_blocks": self.n_blocks,
+            "dim_ff": self.dim_ff,
+            "n_heads": self.n_heads,
+            "attention_dim": self.attention_dim,
+            "fcn_layers": self.fcn_layers,
+            "pos_embedding": self.pos_embedding_init
+        }
+
+    def load_class_param(self, class_param):
+        self.max_input = class_param["input_size"]
+        self.label2idx = class_param["l2i"]
+        self.idx2label = class_param["i2l"]
+        self.vocab = class_param["vocab"]
+        self.embedding_size = class_param["embedding_size"]
+        self.optimizer = class_param["optimizer"]
+        self.loss = class_param["loss"]
+        self.dropout = class_param["dropout"]
+        self.n_blocks = class_param["n_blocks"]
+        self.dim_ff = class_param["dim_ff"]
+        self.n_heads = class_param["n_heads"]
+        self.attention_dim = class_param["attention_dim"]
+        self.fcn_layers = class_param["fcn_layers"]
+        self.pos_embedding_init = class_param["pos_embedding"]
