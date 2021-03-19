@@ -1,4 +1,4 @@
-from keras.layers import Layer, Embedding
+from keras.layers import Layer, Embedding, Dense, Concatenate, Dot, Activation
 from keras import backend as K
 from model.base_classifier import BaseClassifier
 import keras
@@ -7,11 +7,44 @@ import tensorflow as tf
 
 
 class MultiHeadAttention(Layer):
-    # TODO: Implement MultiHeads Attention
-    def __init__(): pass
-    def build(): pass
-    def call(): pass
-    # def compute_output_shape(): pass
+    # TODO: Test MultiHeads Attention
+    def __init__(self, n_heads, dim_k, dim_v, **kwargs):
+        super(MultiHeadAttention, self).__init__(**kwargs)
+        self.n_heads = n_heads
+        self.dim_k = dim_k
+        self.dim_v = dim_k
+
+    def build(self, input_shape):
+        self.attention_heads = [
+            (
+                Dense(self.dim_k, name="W_query"),
+                Dense(self.dim_k, name="W_key"),
+                Dense(self.dim_v, name="W_value")
+            ) for _ in range(self.n_heads)
+        ]
+        # Get hidden/feature shape of the input
+        self.W_o = Dense(input_shape[0][2])
+
+    def attention_score(self, q, k, v):
+        temp = Dot(axes=[2, 2])([q, k])
+        scaled = tf.sqrt(float(q.shape[-1]))
+        softmax = Activation("softmax")(temp/scaled)
+        return Dot(axes=[2, 1])([softmax, v])
+
+    def call(self, inputs):
+        if len(inputs) == 2:
+            query, key, value = inputs[0], inputs[1], inputs[1]
+        else:
+            query, key, value = inputs
+
+        attention = Concatenate()(
+            [
+                self.attention_score(Wq(query), Wk(key), Wv(value))
+                for Wq, Wk, Wv in self.attention_heads
+            ]
+        )
+        output = self.W_o(attention)
+        return output
 
 
 class TransformerEncoderBlock(Layer):
