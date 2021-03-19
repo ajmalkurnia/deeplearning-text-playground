@@ -10,8 +10,13 @@ import tensorflow as tf
 
 
 class MultiHeadAttention(Layer):
-    # TODO: Test MultiHeads Attention
     def __init__(self, n_heads, dim_k, dim_v, **kwargs):
+        """
+        Initialize multi head attention layer
+        :param n_heads: int, number of attention heads
+        :param dim_k: int, length of query & key vector
+        :param dim_v: int, length of value vector
+        """
         super(MultiHeadAttention, self).__init__(**kwargs)
         self.n_heads = n_heads
         self.dim_k = dim_k
@@ -29,6 +34,7 @@ class MultiHeadAttention(Layer):
         self.W_o = Dense(input_shape[0][2])
 
     def attention_score(self, q, k, v):
+        # scaled dot attention computation
         temp = Dot(axes=[2, 2])([q, k])
         scaled = tf.sqrt(float(q.shape[-1]))
         softmax = Activation("softmax")(temp/scaled)
@@ -51,8 +57,14 @@ class MultiHeadAttention(Layer):
 
 
 class TransformerBlock(Layer):
-    # TODO: Test Encoder Block
     def __init__(self, dim_ff, dropout, n_heads, embed_dim, **kwargs):
+        """
+        Initialize a transformer layer
+        :param dim_ff: int, the size of hidden ffn unit
+        :param dropout: float, dropout rate value
+        :param n_heads: int, number of heads
+        :param embed_dim: int, attention length (embedding length)
+        """
         super(TransformerBlock, self).__init__(**kwargs)
         self.dim_ff = dim_ff
         self.dropout = dropout
@@ -92,6 +104,18 @@ class TransformerEmbedding(Layer):
         self, maxlen, vocab_size, embed_dim=256, token_embed_matrix=None,
         pos_embedding_init=True, **kwargs
     ):
+        """
+        Initialize transfomer token+positional embedding
+        :param maxlen: int, maximum sequence length
+        :param vocab_size: int, the size of token emedding vocabulary
+        :param embed_dim: int, embedding dimension
+        :param token_embed_matrix: numpy array, token embedding matrix
+            if given embed_dim must be consistent with embedding shape
+            or else it will use glorot_uniform
+        :param pos_embedding_init: bool, initialize positional embedding
+            if true use the sincos function,
+            if false use the glorot_uniform
+        """
         super(TransformerEmbedding, self).__init__(**kwargs)
         self.max_len = maxlen
         self.vocab_size = vocab_size
@@ -147,12 +171,27 @@ class TransformerEmbedding(Layer):
 
 
 class TransformerClassifier(BaseClassifier):
-    # TODO: Test the classifier
     def __init__(
         self, n_blocks=1, dim_ff=128, dropout=0.3, n_heads=6,
         attention_dim=256, pos_embedding_init=True,
         fcn_layers=[(128, 0.1, "relu")], **kwargs
     ):
+        """
+        Transformer classifier's construction method
+        :param n_blocks: int, number of transformer stack
+        :param dim_ff: int, hidden unit on fcn layer in transformer
+        :param dropout: float, dropout value
+        :param n_heads: int, number of attention heads
+        :param attention_dim: int, number of attention dimension
+            value will be overidden if using custom embedding matrix
+        :param pos_embedding_init: bool, Initialize posiitonal embedding with
+            sincos function, or else will be initialize with glorot)uniform
+        :param fcn_layers: list of tupple, configuration of each
+            fcn layer after transformer, each tupple consist of:
+                [int] number of units,
+                [float] dropout after fcn layer,
+                [string] activation function
+        """
         super(TransformerClassifier, self).__init__(**kwargs)
         self.n_blocks = n_blocks
         self.dim_ff = dim_ff
@@ -178,7 +217,9 @@ class TransformerClassifier(BaseClassifier):
             self.model = TransformerBlock(
                 self.dim_ff, self.dropout, self.n_heads, self.attention_dim
             )(self.model)
+        # IDEA: find a way to use [CLS] token (BERT style)
         self.model = GlobalAveragePooling1D()(self.model)
+
         self.model = Dropout(self.dropout)(self.model)
         for units, do_rate, activation in self.fcn_layers:
             self.model = Dense(units, activation=activation)(self.model)
