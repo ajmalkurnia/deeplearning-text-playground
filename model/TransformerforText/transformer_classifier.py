@@ -1,4 +1,6 @@
 from keras.layers import Layer, Embedding, Dense, Concatenate, Dot, Activation
+from keras.layers import Dropout, LayerNormalization
+from keras.models import Sequential
 from keras import backend as K
 from model.base_classifier import BaseClassifier
 import keras
@@ -47,12 +49,33 @@ class MultiHeadAttention(Layer):
         return output
 
 
-class TransformerEncoderBlock(Layer):
-    # TODO: Implement Encoder Block
-    def __init__(): pass
-    def build(): pass
-    def call(): pass
-    # def compute_output_shape(): pass
+class TransformerBlock(Layer):
+    # TODO: Test Encoder Block
+    def __init__(self, dim_ff, dropout, n_heads, embed_dim, **kwargs):
+        super(TransformerBlock, self).__init__(**kwargs)
+        self.dim_ff = dim_ff
+        self.dropout = dropout
+        self.n_heads = n_heads
+        self.att_dim = embed_dim
+
+    def build(self, input_shape):
+        self.mha = MultiHeadAttention(self.n_heads, self.att_dim, self.att_dim)
+        self.fcn = Sequential([
+            Dense(self.dim_ff, activation="relu"),
+            Dense(self.att_dim)
+        ])
+        self.att_dropout = Dropout(self.dropout)
+        self.att_layer_norm = LayerNormalization(epsilon=1e-6)
+        self.fcn_dropout = Dropout
+        self.fcn_layer_norm = LayerNormalization(epsilon=1e-6)
+
+    def call(self, inputs, training):
+        mha_out = self.mha([inputs, inputs])
+        mha_out = self.att_dropout(mha_out, training=training)
+        mha_out = self.att_layer_norm(inputs + mha_out)
+        fcn_out = self.fcn(mha_out)
+        fcn_out = self.fcn_dropout(fcn_out)
+        return self.fcn_layer_norm(mha_out + fcn_out)
 
 
 class TransformersEmbedding(Layer):
