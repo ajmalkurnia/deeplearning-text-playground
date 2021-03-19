@@ -1,7 +1,7 @@
 from keras.layers import Layer, Embedding, Dense, Concatenate, Dot, Activation
 from keras.layers import Dropout, LayerNormalization
 from keras.layers import Input, GlobalAveragePooling1D
-from keras.models import Sequential, Model
+from keras.models import Model
 from keras import backend as K
 from model.base_classifier import BaseClassifier
 import keras
@@ -20,10 +20,10 @@ class MultiHeadAttention(Layer):
     def build(self, input_shape):
         self.attention_heads = [
             (
-                Dense(self.dim_k, name="W_query"),
-                Dense(self.dim_k, name="W_key"),
-                Dense(self.dim_v, name="W_value")
-            ) for _ in range(self.n_heads)
+                Dense(self.dim_k),  # Wq
+                Dense(self.dim_k),  # Wk
+                Dense(self.dim_v)   # Wv
+            ) for i in range(self.n_heads)
         ]
         # Get hidden/feature shape of the input
         self.W_o = Dense(input_shape[0][2])
@@ -61,37 +61,51 @@ class TransformerBlock(Layer):
 
     def build(self, input_shape):
         self.mha = MultiHeadAttention(self.n_heads, self.att_dim, self.att_dim)
-        self.fcn = Sequential([
-            Dense(self.dim_ff, activation="relu"),
-            Dense(self.att_dim)
-        ])
+        self.ffn_hidden = Dense(self.dim_ff, activation="relu")
+        self.ffn_out = Dense(self.att_dim)
         self.att_dropout = Dropout(self.dropout)
         self.att_layer_norm = LayerNormalization(epsilon=1e-6)
-        self.fcn_dropout = Dropout
+        self.fcn_dropout = Dropout(self.dropout)
         self.fcn_layer_norm = LayerNormalization(epsilon=1e-6)
 
     def call(self, inputs, training):
         mha_out = self.mha([inputs, inputs])
         mha_out = self.att_dropout(mha_out, training=training)
         mha_out = self.att_layer_norm(inputs + mha_out)
-        fcn_out = self.fcn(mha_out)
-        fcn_out = self.fcn_dropout(fcn_out)
+
+        fcn_out = self.ffn_out(self.ffn_hidden(mha_out))
+        fcn_out = self.fcn_dropout(fcn_out, training=training)
+
         return self.fcn_layer_norm(mha_out + fcn_out)
+
+    def get_config(self):
+        config = super(TransformerBlock, self).get_config()
+        config["dim_ff"] = self.dim_ff
+        config["dropout"] = self.dropout
+        config["n_heads"] = self.n_heads
+        config["embed_dim"] = self.att_dim
+        return config
 
 
 class TransformerEmbedding(Layer):
     def __init__(
-        self, maxlen, vocab_size, embed_dim, token_embed_matrix=None,
-        pos_embedding_init=True
+        self, maxlen, vocab_size, embed_dim=256, token_embed_matrix=None,
+        pos_embedding_init=True, **kwargs
     ):
-        super(TransformerEmbedding, self).__init__()
+        super(TransformerEmbedding, self).__init__(**kwargs)
+        self.max_len = maxlen
+        self.vocab_size = vocab_size
+        self.embed_dim = embed_dim
+
         if token_embed_matrix is None:
             token_initializer = 'glorot_uniform'
         else:
             token_initializer = keras.initializers.Constant(token_embed_matrix)
 
         if pos_embedding_init:
-            pos_initializer = keras.initializers.Constant(self.init_pos_emb)
+            pos_initializer = keras.initializers.Constant(
+                self.init_pos_emb((maxlen, embed_dim), float)
+            )
         else:
             pos_initializer = "glorot_uniform"
 
@@ -124,12 +138,20 @@ class TransformerEmbedding(Layer):
         x = self.token_emb(x)
         return x + positions
 
+    def get_config(self):
+        config = super(TransformerEmbedding, self).get_config()
+        config["maxlen"] = self.max_len
+        config["vocab_size"] = self.vocab_size
+        config["embed_dim"] = self.embed_dim
+        return config
+
 
 class TransformerClassifier(BaseClassifier):
     # TODO: Test the classifier
     def __init__(
-        self, n_blocks, dim_ff, dropout, n_heads, attention_dim,
-        pos_embedding_init=True, fcn=[(128, 0.1, "relu")], **kwargs
+        self, n_blocks=1, dim_ff=128, dropout=0.3, n_heads=6,
+        attention_dim=256, pos_embedding_init=True, fcn_layers=[(128, 0.1, "relu")],
+        **kwargs
     ):
         super(TransformerClassifier, self).__init__(**kwargs)
         self.n_blocks = n_blocks
@@ -138,10 +160,16 @@ class TransformerClassifier(BaseClassifier):
         self.n_heads = n_heads
         self.attention_dim = attention_dim
         self.pos_embedding_init = pos_embedding_init
-        self.fcn = fcn
+        self.fcn_layers = fcn_layers
 
     def init_model(self):
         input_layer = Input(shape=(self.max_input, ))
+
+        if self.embedding.shape[1] == self.vocab_size:
+            self.embedding = None
+        if self.embedding is not None:
+            self.attention_dim = self.embedding.shape[1]
+
         self.model = TransformerEmbedding(
             self.max_input, self.vocab_size, self.attention_dim,
             self.embedding, self.pos_embedding_init
@@ -152,15 +180,19 @@ class TransformerClassifier(BaseClassifier):
             )(self.model)
         self.model = GlobalAveragePooling1D()(self.model)
         self.model = Dropout(self.dropout)(self.model)
-        for units, do_rate, activation in self.fcn:
-            self.model = Dense(self.units, activation=activation)(self.model)
+        for units, do_rate, activation in self.fcn_layers:
+            self.model = Dense(units, activation=activation)(self.model)
             self.model = Dropout(do_rate)(self.model)
         output = Dense(self.n_label, "softmax")(self.model)
-        self.model = Model(inputs=input_layer, output=output)
+        self.model = Model(input_layer, output)
         self.model.compile(
             optimizer=self.optimizer, loss=self.loss, metrics=["accuracy"]
         )
         self.model.summary()
+
+    def init_embedding(self):
+        if self.embedding_file:
+            super().init_wv_embedding()
 
     def get_class_param(self):
         return {

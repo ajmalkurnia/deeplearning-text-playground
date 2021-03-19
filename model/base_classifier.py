@@ -58,7 +58,7 @@ class BaseClassifier():
     def init_model(self):
         raise NotImplementedError()
 
-    def __init_onehot_embedding(self):
+    def init_onehot_embedding(self):
         """
         Initialization one hot vector the vocabulary
         """
@@ -71,7 +71,7 @@ class BaseClassifier():
             self.embedding.append(one_hot)
         self.embedding = np.array(self.embedding)
 
-    def __init_wv_embedding(self):
+    def init_wv_embedding(self):
         """
         Initialization of for Word embedding matrix
         UNK word will be initialized randomly
@@ -191,6 +191,12 @@ class BaseClassifier():
             callbacks=callbacks_list
         )
 
+    def init_embedding(self):
+        if self.embedding_file and self.embedding is None:
+            self.init_wv_embedding()
+        elif self.emebdding is None:
+            self.init_onehot_embedding()
+
     def train(
         self, X, y, epoch, batch_size,
         validation_pair=None, ckpoint_file=None
@@ -206,10 +212,7 @@ class BaseClassifier():
         """
         if self.vocab is None:
             self.__init_w2i(X)
-        if self.embedding_file and self.embedding is None:
-            self.__init_wv_embedding()
-        elif self.emebdding is None:
-            self.__init_onehot_embedding()
+        self.init_embedding()
         if self.label2idx is None:
             self.__init_l2i(y)
         if self.model is None:
@@ -238,7 +241,6 @@ class BaseClassifier():
             "model": f"{filename}.hdf5",
             "class_param": f"{filename}_class.pkl"
         }
-        # self.cnn_model.save()
         with TemporaryDirectory() as tmp_dir:
             network_path = f"{tmp_dir}/{filenames['model']}"
             self.model.save(network_path)

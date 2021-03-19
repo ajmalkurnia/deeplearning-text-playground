@@ -1,5 +1,5 @@
 from sklearn.metrics import classification_report
-from model.RNNText.rnn_classifier import RNNClassifier
+from model.TransformerText.transformer_classifier import TransformerClassifier
 
 
 def main(args, data):
@@ -12,26 +12,27 @@ def main(args, data):
         "embedding_type": args.embeddingtype,
         "embedding_file": args.embeddingfile,
         "optimizer": "adam",
-        "rnn_size": args.unitrnn,
         "dropout": args.dropout,
-        "rnn_type": args.typernn,
-        "attention": "self"
+        "n_blocks": args.nblocks,
+        "n_heads": args.nheads,
+        "dim_ff": args.dimff,
+        "pos_embedding_init": args.positional
     }
 
     if args.loadmodel:
-        rnn = RNNClassifier()
-        rnn.load(args.loadmodel)
+        transformer = TransformerClassifier()
+        transformer.load(args.loadmodel)
     else:
-        rnn = RNNClassifier(**arch_config)
+        transformer = TransformerClassifier(**arch_config)
         print("Training")
-        rnn.train(
+        transformer.train(
             X_train, y_train, args.epoch, args.batchsize,
             (X_val, y_val), args.checkpoint
         )
     print("Testing")
-    y_pred = rnn.test(X_test)
+    y_pred = transformer.test(X_test)
     # evaluation report
     print(classification_report(y_test, y_pred))
     if args.savemodel:
         print("Saving file")
-        rnn.save(args.savemodel)
+        transformer.save(args.savemodel)

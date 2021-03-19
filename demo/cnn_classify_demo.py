@@ -1,5 +1,5 @@
 from sklearn.metrics import classification_report
-from model.CNNforText.cnn_classifier import CNNClassifier
+from model.CNNText.cnn_classifier import CNNClassifier
 
 
 def main(args, data):
