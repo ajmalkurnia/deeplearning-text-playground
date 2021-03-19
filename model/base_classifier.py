@@ -2,6 +2,7 @@ from keras.preprocessing.sequence import pad_sequences
 from keras.utils import to_categorical
 from keras.models import load_model
 from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.initializers import Constant
 
 from zipfile import ZipFile
 from tempfile import TemporaryDirectory
@@ -16,19 +17,28 @@ class BaseClassifier():
     def __init__(
         self, input_size=50, optimizer="adam", loss="categorical_crossentropy",
         embedding_matrix=None, vocab_size=0, vocab=None, embedding_file=None,
-        embedding_type="w2v"
+        embedding_type="glorot_uniform", train_embedding=True
     ):
         """
         Class constructor
         :param input_size: int, maximum number of token input
         :param optimizer: string, learning optimizer (keras model "optimizer")
         :param loss: string, loss function
-        :param embeding matrix: numpy array,
+        :param embedding matrix: numpy array,
             Custom embedding matrix of the provided vocab
         :param vocab size: int, maximum size of vocabulary of the model
             (most frequent word of the training data will be used)
         :param embedding_file: string, path to embedding file
-        :param embedding_type: string, w2v for word2vec, ft for FasText
+        :param embedding_type: string, embedding type
+            w2v for word2vec, matrix will be taken from embedding file
+            ft for FasText, matrix will be taken from embedding file
+            onehot, initialize one hot encoding of vocabulary
+            custom, use embedding matrix
+            or any valid keras.initializer string
+        :param train_embedding: boolean,
+            trainable parameter on Embedding layer
+            which apparently not recommended when using pretrained weight
+            refer -> https://keras.io/examples/nlp/pretrained_word_embeddings/
         """
         self.vocab_size = vocab_size
         self.label2idx = None
@@ -40,6 +50,8 @@ class BaseClassifier():
         # It should work but not tested yet
         self.embedding = embedding_matrix
         self.vocab = vocab
+        self.train_embedding = train_embedding
+        self.embedding_type = embedding_type
         if self.embedding:
             self.embedding_size = self.embedding.shape[1]
             self.vocab_size = len(vocab)
@@ -49,16 +61,15 @@ class BaseClassifier():
                 )
         if embedding_file:
             self.embedding_file = embedding_file
-            self.embedding_type = embedding_type
             if self.embedding_type is None:
                 raise ValueError(
-                    "Provide the embedding_type of the embedding file"
+                    "Provide the embedding_type of the embedding file [w2v|ft]"
                 )
 
     def init_model(self):
         raise NotImplementedError()
 
-    def init_onehot_embedding(self):
+    def __init_onehot_embedding(self):
         """
         Initialization one hot vector the vocabulary
         """
@@ -71,7 +82,7 @@ class BaseClassifier():
             self.embedding.append(one_hot)
         self.embedding = np.array(self.embedding)
 
-    def init_wv_embedding(self):
+    def __init_wv_embedding(self):
         """
         Initialization of for Word embedding matrix
         UNK word will be initialized randomly
@@ -191,11 +202,17 @@ class BaseClassifier():
             callbacks=callbacks_list
         )
 
-    def init_embedding(self):
-        if self.embedding_file and self.embedding is None:
-            self.init_wv_embedding()
-        elif self.emebdding is None:
-            self.init_onehot_embedding()
+    def __init_embedding(self):
+        if self.embedding_type in ["w2v", "ft"]:
+            self.__init_wv_embedding()
+            self.embedding = Constant(self.embedding)
+        elif self.embedding_type == "onehot":
+            self.__init_onehot_embedding()
+            self.embedding = Constant(self.embedding)
+        elif self.embedding_type == "custom":
+            self.embedding = Constant(self.embedding)
+        else:
+            self.embedding = self.embedding_type
 
     def train(
         self, X, y, epoch, batch_size,
@@ -212,7 +229,7 @@ class BaseClassifier():
         """
         if self.vocab is None:
             self.__init_w2i(X)
-        self.init_embedding()
+        self.__init_embedding()
         if self.label2idx is None:
             self.__init_l2i(y)
         if self.model is None:

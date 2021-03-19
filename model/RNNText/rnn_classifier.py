@@ -1,7 +1,6 @@
 from keras.layers import LSTM, Embedding, Dense, Dropout, Bidirectional, GRU
 from keras.layers import Concatenate
 from keras.models import Model, Input
-import keras
 
 from model.AttentionText.attention_text import Attention
 from model.base_classifier import BaseClassifier
@@ -48,13 +47,13 @@ class RNNClassifier(BaseClassifier):
         """
         # Input
         input_layer = Input(shape=(self.max_input,))
-        # Embedding weight
-        initializer = keras.initializers.Constant(self.embedding)
         # Embedding_layer
         embedding_layer = Embedding(
             input_dim=self.vocab_size, output_dim=self.embedding_size,
             input_length=self.max_input,
-            embeddings_initializer=initializer)
+            embeddings_initializer=self.embedding,
+            trainable=self.train_embedding
+        )
         self.model = embedding_layer(input_layer)
 
         # RNN

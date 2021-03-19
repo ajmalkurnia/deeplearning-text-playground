@@ -101,17 +101,20 @@ class TransformerBlock(Layer):
 
 class TransformerEmbedding(Layer):
     def __init__(
-        self, maxlen, vocab_size, embed_dim=256, token_embed_matrix=None,
-        pos_embedding_init=True, **kwargs
+        self, maxlen, vocab_size, embed_dim=256,
+        token_embed_matrix="glorot_uniform", pos_embedding_init=True,
+        trainable_embedding=True, **kwargs
     ):
         """
         Initialize transfomer token+positional embedding
         :param maxlen: int, maximum sequence length
         :param vocab_size: int, the size of token emedding vocabulary
         :param embed_dim: int, embedding dimension
-        :param token_embed_matrix: numpy array, token embedding matrix
-            if given embed_dim must be consistent with embedding shape
-            or else it will use glorot_uniform
+        :param token_embed_matrix: numpy array/string,
+            token embedding initializer,
+            if numpy array is given the embed_dim must be consistent
+                with matrix shape
+            if string is given use valid keras initializer
         :param pos_embedding_init: bool, initialize positional embedding
             if true use the sincos function,
             if false use the glorot_uniform
@@ -120,29 +123,29 @@ class TransformerEmbedding(Layer):
         self.max_len = maxlen
         self.vocab_size = vocab_size
         self.embed_dim = embed_dim
-
-        if token_embed_matrix is None:
-            token_initializer = 'glorot_uniform'
-        else:
-            token_initializer = keras.initializers.Constant(token_embed_matrix)
+        self.token_initializer = token_embed_matrix
 
         if pos_embedding_init:
-            pos_initializer = keras.initializers.Constant(
+            self.pos_initializer = keras.initializers.Constant(
                 self.init_pos_emb((maxlen, embed_dim), float)
             )
         else:
-            pos_initializer = "glorot_uniform"
+            self.pos_initializer = "glorot_uniform"
+        self.trainable_embedding = trainable_embedding
 
+    def build(self, init_shape):
         self.token_emb = Embedding(
-            input_dim=vocab_size,
-            output_dim=embed_dim,
-            embeddings_initializer=token_initializer
+            input_dim=self.vocab_size,
+            output_dim=self.embed_dim,
+            embeddings_initializer=self.token_initializer,
+            trainable=self.trainable_embedding
         )
 
         self.pos_emb = Embedding(
-            input_dim=maxlen,
-            output_dim=embed_dim,
-            embeddings_initializer=pos_initializer
+            input_dim=self.max_len,
+            output_dim=self.embed_dim,
+            embeddings_initializer=self.pos_initializer,
+            trainable=self.trainable_embedding
         )
 
     def init_pos_emb(self, shape, dtype):
@@ -203,15 +206,13 @@ class TransformerClassifier(BaseClassifier):
 
     def init_model(self):
         input_layer = Input(shape=(self.max_input, ))
-
-        if self.embedding.shape[1] == self.vocab_size:
-            self.embedding = None
-        if self.embedding is not None:
-            self.attention_dim = self.embedding.shape[1]
+        if not isinstance(self.embedding, str):
+            self.attention_dim = self.embedding.value.shape[1]
+            # self.embedding = keras.initializers.Constant(self.embedding)
 
         self.model = TransformerEmbedding(
             self.max_input, self.vocab_size, self.attention_dim,
-            self.embedding, self.pos_embedding_init
+            self.embedding, self.pos_embedding_init, self.train_embedding
         )(input_layer)
         for _ in range(self.n_blocks):
             self.model = TransformerBlock(
@@ -230,10 +231,6 @@ class TransformerClassifier(BaseClassifier):
             optimizer=self.optimizer, loss=self.loss, metrics=["accuracy"]
         )
         self.model.summary()
-
-    def init_embedding(self):
-        if self.embedding_file:
-            super().init_wv_embedding()
 
     def get_class_param(self):
         return {
