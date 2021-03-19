@@ -22,7 +22,7 @@ class Tokenizer():
         self.vocab_size = vocab_size
         self.unk_token = unk_token
         self.vocab_count = defaultdict(int)
-        self.vocab_index = {"UNK": 0}
+        self.vocab_index = {}
 
     def tokenize(self):
         raise NotImplementedError
@@ -37,9 +37,9 @@ class Tokenizer():
         sorted_vocab = sorted(
             self.vocab_count.items(), key=lambda x: x[1], reverse=True
         )
-        for idx, (word, _) in enumerate(sorted_vocab):
+        for word, _ in sorted_vocab:
             if len(self.vocab_index) < self.vocab_size or self.vocab_size == 0:
-                self.vocab_index[word] = idx
+                self.vocab_index[word] = len(self.vocab_index)
 
     def to_index(self, tokenized_corpus):
         """

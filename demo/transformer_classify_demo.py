@@ -9,7 +9,7 @@ def main(args, data):
     # training, testing
     arch_config = {
         "vocab_size": args.vocabsize,
-        "embedding_type": args.embeddingtype,
+        "embedding_type": args.embeddingtype or "glorot_uniform",
         "embedding_file": args.embeddingfile,
         "optimizer": "adam",
         "dropout": args.dropout,

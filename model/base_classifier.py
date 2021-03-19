@@ -11,6 +11,9 @@ import pickle
 from common.tokenization import Tokenizer
 from common.word_vector import WordEmbedding
 from model.AttentionText.attention_text import Attention
+from model.TransformerText.transformer_block import (
+    TransformerBlock, TransformerEmbedding, MultiAttention
+)
 
 
 class BaseClassifier():
@@ -101,9 +104,15 @@ class BaseClassifier():
         """
         Initialization of vocabulary and the index of the vocabulary
         """
+        special_token = self.add_special_token()
         tokenizer = Tokenizer(self.vocab_size)
+        for idx, token in enumerate(special_token):
+            tokenizer.vocab_index[token] = idx
         tokenizer.build_vocab(tokenized_corpus)
         self.vocab = tokenizer.vocab_index
+
+    def add_special_token(self):
+        return ["[UNK]"]
 
     def vectorized_input(self, corpus):
         """
@@ -182,7 +191,7 @@ class BaseClassifier():
             )
             es = EarlyStopping(
                 monitor='val_accuracy', mode='max', verbose=1,
-                patience=int(epoch/4), restore_best_weights=True
+                patience=int(epoch/2), restore_best_weights=True
             )
             callbacks_list = [es]
             if ckpoint_file:
@@ -282,7 +291,12 @@ class BaseClassifier():
                         zipf.extract(filename, tmp_dir)
                         self.model = load_model(
                             f"{tmp_dir}/{filename}",
-                            custom_objects={"Attention": Attention}
+                            custom_objects={
+                                "Attention": Attention,
+                                "TransformerBlock": TransformerBlock,
+                                "TransformerEmbedding": TransformerEmbedding,
+                                "MultiAttention": MultiAttention
+                                }
                         )
                         self.model.summary()
                 elif filename.endswith("_class.pkl"):
