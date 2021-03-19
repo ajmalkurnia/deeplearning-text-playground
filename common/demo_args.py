@@ -9,6 +9,7 @@ def get_args():
     subparser = parser.add_subparsers(help="Sub-command", dest="architecture")
     subparser = rnn_args(subparser)
     subparser = cnn_args(subparser)
+    subparser = transformer_args(subparser)
     return parser
 
 
@@ -80,3 +81,29 @@ def cnn_args(subparser):
         help="Convolution process type", default="sequence"
     )
     return subparser
+
+
+def transformer_args(subparser):
+    transformer_parser = subparser.add_parser(
+        "transformer", help="Run Transformer Model"
+    )
+    transformer_parser.add_argument(
+        "--nblocks", type=int, help="Number of transformer blocks",
+        default=2
+    )
+    transformer_parser.add_argument(
+        "--nheads", type=int, help="Number of attention heads",
+        default=6
+    )
+    transformer_parser.add_argument(
+        "--dimff", type=int, help="Feed forward unit inside transformer",
+        default=256
+    )
+    transformer_parser.add_argument(
+        "--dropout", type=float, help="Dropout rate",
+        default=0.3
+    )
+    transformer_parser.add_argument(
+        "--positional", action="store_true",
+        help="Initialized positinal embedding with sincos"
+    )

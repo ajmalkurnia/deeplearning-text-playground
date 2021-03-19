@@ -2,7 +2,6 @@ from keras.layers import Input, Embedding, Activation, Flatten, Dense
 from keras.layers import Conv1D, MaxPooling1D, Dropout, concatenate
 from keras.layers import GlobalMaxPooling1D
 from keras.models import Model
-import keras
 
 from model.base_classifier import BaseClassifier
 
@@ -66,8 +65,8 @@ class CNNClassifier(BaseClassifier):
             self.vocab_size,
             self.embedding_size,
             input_length=self.max_input,
-            embeddings_initializer=keras.initializers.Constant(self.embedding)
-            # trainable=True
+            embeddings_initializer=self.embedding,
+            trainable=self.train_embedding
         )
         x = embedding_layer(inputs)
         # 1 is stacked the usual way (like image CNN),

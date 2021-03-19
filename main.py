@@ -6,6 +6,7 @@ from common.tokenization import NLTKToknizerWrapper
 from common.util import remove_characters, remove_words
 from common.demo_args import get_args
 from demo import rnn_classify_demo, cnn_classify_demo
+from demo import transformer_classify_demo
 
 
 def main(args):
@@ -40,6 +41,10 @@ def main(args):
         rnn_classify_demo.main(args, data)
     elif args.architecture == "cnn":
         cnn_classify_demo.main(args, data)
+    elif args.architecture == "transformer":
+        transformer_classify_demo.main(args, data)
+    else:
+        raise ValueError("Invalid sub-command")
 
 
 if __name__ == "__main__":

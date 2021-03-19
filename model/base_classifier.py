@@ -2,6 +2,7 @@ from keras.preprocessing.sequence import pad_sequences
 from keras.utils import to_categorical
 from keras.models import load_model
 from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.initializers import Constant
 
 from zipfile import ZipFile
 from tempfile import TemporaryDirectory
@@ -10,25 +11,37 @@ import pickle
 from common.tokenization import Tokenizer
 from common.word_vector import WordEmbedding
 from model.AttentionText.attention_text import Attention
+from model.TransformerText.transformer_block import (
+    TransformerBlock, TransformerEmbedding, MultiAttention
+)
 
 
 class BaseClassifier():
     def __init__(
         self, input_size=50, optimizer="adam", loss="categorical_crossentropy",
         embedding_matrix=None, vocab_size=0, vocab=None, embedding_file=None,
-        embedding_type="w2v"
+        embedding_type="glorot_uniform", train_embedding=True
     ):
         """
         Class constructor
         :param input_size: int, maximum number of token input
         :param optimizer: string, learning optimizer (keras model "optimizer")
         :param loss: string, loss function
-        :param embeding matrix: numpy array,
+        :param embedding matrix: numpy array,
             Custom embedding matrix of the provided vocab
         :param vocab size: int, maximum size of vocabulary of the model
             (most frequent word of the training data will be used)
         :param embedding_file: string, path to embedding file
-        :param embedding_type: string, w2v for word2vec, ft for FasText
+        :param embedding_type: string, embedding type
+            w2v for word2vec, matrix will be taken from embedding file
+            ft for FasText, matrix will be taken from embedding file
+            onehot, initialize one hot encoding of vocabulary
+            custom, use embedding matrix
+            or any valid keras.initializer string
+        :param train_embedding: boolean,
+            trainable parameter on Embedding layer
+            which apparently not recommended when using pretrained weight
+            refer -> https://keras.io/examples/nlp/pretrained_word_embeddings/
         """
         self.vocab_size = vocab_size
         self.label2idx = None
@@ -40,6 +53,8 @@ class BaseClassifier():
         # It should work but not tested yet
         self.embedding = embedding_matrix
         self.vocab = vocab
+        self.train_embedding = train_embedding
+        self.embedding_type = embedding_type
         if self.embedding:
             self.embedding_size = self.embedding.shape[1]
             self.vocab_size = len(vocab)
@@ -49,10 +64,9 @@ class BaseClassifier():
                 )
         if embedding_file:
             self.embedding_file = embedding_file
-            self.embedding_type = embedding_type
             if self.embedding_type is None:
                 raise ValueError(
-                    "Provide the embedding_type of the embedding file"
+                    "Provide the embedding_type of the embedding file [w2v|ft]"
                 )
 
     def init_model(self):
@@ -90,9 +104,15 @@ class BaseClassifier():
         """
         Initialization of vocabulary and the index of the vocabulary
         """
+        special_token = self.add_special_token()
         tokenizer = Tokenizer(self.vocab_size)
+        for idx, token in enumerate(special_token):
+            tokenizer.vocab_index[token] = idx
         tokenizer.build_vocab(tokenized_corpus)
         self.vocab = tokenizer.vocab_index
+
+    def add_special_token(self):
+        return ["[UNK]"]
 
     def vectorized_input(self, corpus):
         """
@@ -171,7 +191,7 @@ class BaseClassifier():
             )
             es = EarlyStopping(
                 monitor='val_accuracy', mode='max', verbose=1,
-                patience=int(epoch/4), restore_best_weights=True
+                patience=int(epoch/2), restore_best_weights=True
             )
             callbacks_list = [es]
             if ckpoint_file:
@@ -191,6 +211,18 @@ class BaseClassifier():
             callbacks=callbacks_list
         )
 
+    def __init_embedding(self):
+        if self.embedding_type in ["w2v", "ft"]:
+            self.__init_wv_embedding()
+            self.embedding = Constant(self.embedding)
+        elif self.embedding_type == "onehot":
+            self.__init_onehot_embedding()
+            self.embedding = Constant(self.embedding)
+        elif self.embedding_type == "custom":
+            self.embedding = Constant(self.embedding)
+        else:
+            self.embedding = self.embedding_type
+
     def train(
         self, X, y, epoch, batch_size,
         validation_pair=None, ckpoint_file=None
@@ -206,10 +238,7 @@ class BaseClassifier():
         """
         if self.vocab is None:
             self.__init_w2i(X)
-        if self.embedding_file and self.embedding is None:
-            self.__init_wv_embedding()
-        elif self.emebdding is None:
-            self.__init_onehot_embedding()
+        self.__init_embedding()
         if self.label2idx is None:
             self.__init_l2i(y)
         if self.model is None:
@@ -238,7 +267,6 @@ class BaseClassifier():
             "model": f"{filename}.hdf5",
             "class_param": f"{filename}_class.pkl"
         }
-        # self.cnn_model.save()
         with TemporaryDirectory() as tmp_dir:
             network_path = f"{tmp_dir}/{filenames['model']}"
             self.model.save(network_path)
@@ -263,7 +291,12 @@ class BaseClassifier():
                         zipf.extract(filename, tmp_dir)
                         self.model = load_model(
                             f"{tmp_dir}/{filename}",
-                            custom_objects={"Attention": Attention}
+                            custom_objects={
+                                "Attention": Attention,
+                                "TransformerBlock": TransformerBlock,
+                                "TransformerEmbedding": TransformerEmbedding,
+                                "MultiAttention": MultiAttention
+                                }
                         )
                         self.model.summary()
                 elif filename.endswith("_class.pkl"):
