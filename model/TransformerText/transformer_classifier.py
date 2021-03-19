@@ -150,8 +150,8 @@ class TransformerClassifier(BaseClassifier):
     # TODO: Test the classifier
     def __init__(
         self, n_blocks=1, dim_ff=128, dropout=0.3, n_heads=6,
-        attention_dim=256, pos_embedding_init=True, fcn_layers=[(128, 0.1, "relu")],
-        **kwargs
+        attention_dim=256, pos_embedding_init=True,
+        fcn_layers=[(128, 0.1, "relu")], **kwargs
     ):
         super(TransformerClassifier, self).__init__(**kwargs)
         self.n_blocks = n_blocks
