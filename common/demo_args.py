@@ -107,3 +107,19 @@ def transformer_args(subparser):
         "--positional", action="store_true",
         help="Initialized positinal embedding with sincos"
     )
+
+
+def han_args(subparser):
+    han_parser = subparser.add_parser(
+        "han", help="Run HAN Model"
+    )
+    han_parser.add_argument(
+        "-u", "--unitrnn", type=int, help="RNN unit size", default=100
+    )
+    han_parser.add_argument(
+        "-t", "--typernn", type=str, help="Type of RNN layer",
+        choices={"lstm", "gru"}, default="lstm"
+    )
+    han_parser.add_argument(
+        "--dropout", type=float, help="Droupout value", default=0.5
+    )
