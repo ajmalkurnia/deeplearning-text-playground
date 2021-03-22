@@ -8,6 +8,8 @@ from zipfile import ZipFile
 from tempfile import TemporaryDirectory
 import numpy as np
 import pickle
+from itertools.chain import from_iterable
+
 from common.tokenization import Tokenizer
 from common.word_vector import WordEmbedding
 from model.AttentionText.attention_text import Attention
@@ -103,7 +105,19 @@ class BaseClassifier():
     def __init_w2i(self, tokenized_corpus):
         """
         Initialization of vocabulary and the index of the vocabulary
+        :param tokenized_corpus: string inside 2 depth list or 3 depth list.
+            Ex 2d: [["token", "seq", "data1"]]
+            Ex 3d: [[
+                ["token", "seq", "sent1", "data1"],
+                ["token", "seq", "sent2", "data1]
+            ]]
+
         """
+        # Handle 3D tokenized input
+        if isinstance(tokenized_corpus[0][0], list):
+            tokenized_corpus = [
+                list(from_iterable(*data)) for data in tokenized_corpus
+            ]
         special_token = self.add_special_token()
         tokenizer = Tokenizer(self.vocab_size)
         for idx, token in enumerate(special_token):
@@ -124,10 +138,7 @@ class BaseClassifier():
         for text in corpus:
             idx_list = []
             for idx, token in enumerate(text):
-                if token in self.vocab:
-                    idx_list.append(self.vocab[token])
-                else:
-                    idx_list.append(0)
+                idx_list.append(self.vocab.get(token, 0))
             v_input.append(idx_list)
         return pad_sequences(v_input, self.max_input, padding='post')
 
