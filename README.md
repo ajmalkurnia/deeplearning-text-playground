@@ -3,13 +3,15 @@
 Playing with some deep learning for various text proccesing task, mainly using keras and some tensorflow
 
 ## Architecture:
-1. CNN
-2. RNN (Bi-LSTM/GRU)
-3. Attention Mechanism (with bi-LSTM)
-4. Transformers (__In-Progress__)
+1. Convolutional Neural Network (CNN)
+2. Recurrent Neural Network (RNN) (Bi-LSTM/bi-GRU)
+3. Attention Mechanism with RNN
+4. Transformers
+5. Hierarchical Attention Network (HAN) (**Classifier Only**)
+6. Recurrent Convolutional Neural Networks (RCNN) (_In-Progress_)
 
 ## Task:
-1. Classification (__In-progress__)
+1. Classification (_In-progress_)
 2. Sequence Tagging
 3. Sequence-to-Sequence
 4. Text Generation
@@ -43,6 +45,8 @@ In the future a jupyter notebook for each task will be added for a simple demo
 - RNN Multiplicative Attention [Luong M., 2015](https://arxiv.org/abs/1508.04025)
 - RNN Self Attention [Lin Z., 2016](https://arxiv.org/abs/1703.03130)
 - Transformer [Vaswani A., 2017](https://arxiv.org/abs/1706.03762)
+- HAN [Yang Z., 2016](https://www.aclweb.org/anthology/N16-1174/)
+- RCNN [Lai S., 2015](https://dl.acm.org/doi/10.5555/2886521.2886636)
 
 ### Web Articles
 - [CNN classification 1](https://cezannec.github.io/CNN_Text_Classification/): More thorough explanation 
