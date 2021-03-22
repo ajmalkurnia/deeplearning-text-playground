@@ -31,7 +31,8 @@ class Attention(Layer):
             "general": self.general_score,
             "location": self.location_score,
             "add": self.additive_score,
-            "self": self.self_score
+            "self": self.self_score,
+            "hierarchy": self.hierarchy_score
         }
         if score not in self.ATTENTION_SCORE_MAP:
             raise ValueError(
@@ -60,6 +61,8 @@ class Attention(Layer):
         elif self.score == "self":
             self.W1 = Dense(self.feature, activation="tanh")
             self.W2 = Dense(self.feature, name="sf_W")
+        elif self.score == "hierarchy":
+            self.W1 = Dense((self.feature), activation="tanh")
 
         super(Attention, self).build(input_shape)
 
@@ -85,6 +88,9 @@ class Attention(Layer):
 
     def self_score(self, query, key):
         return self.W2(self.W1(query))
+
+    def hierarchy_score(self, query, key):
+        return self.W1(query)
 
     def _compute_additional_loss(self, attention_weights):
         """
