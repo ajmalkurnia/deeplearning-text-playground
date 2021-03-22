@@ -6,7 +6,7 @@ from common.tokenization import NLTKToknizerWrapper
 from common.util import remove_characters, remove_words
 from common.demo_args import get_args
 from demo import rnn_classify_demo, cnn_classify_demo
-from demo import transformer_classify_demo
+from demo import transformer_classify_demo, han_classify_demo
 
 
 def main(args):
@@ -36,6 +36,7 @@ def main(args):
     X_train, X_val, y_train, y_val = train_test_split(
         X_train, y_train, train_size=0.9, test_size=0.1, random_state=4371
     )
+
     data = X_train, y_train, X_test, y_test, X_val, y_val
     if args.architecture == "rnn":
         rnn_classify_demo.main(args, data)
@@ -43,6 +44,8 @@ def main(args):
         cnn_classify_demo.main(args, data)
     elif args.architecture == "transformer":
         transformer_classify_demo.main(args, data)
+    elif args.architecture == "han":
+        han_classify_demo.main(args, data)
     else:
         raise ValueError("Invalid sub-command")
 

@@ -1,5 +1,6 @@
 from keras.layers import Layer, Activation, Dot, Dense
-from keras.layers import RepeatVector, Flatten
+from keras.layers import RepeatVector, Flatten, Lambda
+from keras import backend as K
 import tensorflow as tf
 import numpy as np
 
@@ -31,7 +32,8 @@ class Attention(Layer):
             "general": self.general_score,
             "location": self.location_score,
             "add": self.additive_score,
-            "self": self.self_score
+            "self": self.self_score,
+            "hierarchy": self.hierarchy_score
         }
         if score not in self.ATTENTION_SCORE_MAP:
             raise ValueError(
@@ -60,6 +62,8 @@ class Attention(Layer):
         elif self.score == "self":
             self.W1 = Dense(self.feature, activation="tanh")
             self.W2 = Dense(self.feature, name="sf_W")
+        elif self.score == "hierarchy":
+            self.W1 = Dense((self.feature), activation="tanh")
 
         super(Attention, self).build(input_shape)
 
@@ -85,6 +89,9 @@ class Attention(Layer):
 
     def self_score(self, query, key):
         return self.W2(self.W1(query))
+
+    def hierarchy_score(self, query, key):
+        return self.W1(query)
 
     def _compute_additional_loss(self, attention_weights):
         """
@@ -120,11 +127,10 @@ class Attention(Layer):
         if len(inputs) == 2:
             query, key = inputs
         else:
-            query, key = inputs, None
+            query, key = inputs[0], None
 
         if key is not None:
             key = tf.expand_dims(key, 1)
-
         # 'self' scoring will return (batch, seq, hid)
         # others will return (bacth, seq, 1)
         score = self.score_function(query, key)
@@ -140,12 +146,26 @@ class Attention(Layer):
             self._compute_additional_loss((attention_weights))
             context_vector = Flatten()(attention_matrix)
         else:
-            context_vector = tf.reduce_sum(attention_matrix, axis=1)
+            context_vector = Lambda(
+                lambda x: K.sum(x, axis=1)
+            )(attention_matrix)
+            # tf.reduce_sum(attention_matrix, axis=1)
 
         if self.return_attention:
             return [context_vector, attention_weights]
         else:
             return context_vector
+
+    def compute_output_shape(self, input_shape):
+        if self.return_attention and self.score == "self":
+            return [
+                (None, self.feature),
+                (None, self.maxlen, self.feature)
+            ]
+        elif self.return_attention:
+            return [(None, self.feature), (None, self.maxlen, 1)]
+        else:
+            return (None, self.feature)
 
     def get_config(self):
         config = super(Attention, self).get_config()

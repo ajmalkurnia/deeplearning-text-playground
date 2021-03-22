@@ -8,6 +8,8 @@ from zipfile import ZipFile
 from tempfile import TemporaryDirectory
 import numpy as np
 import pickle
+import itertools
+
 from common.tokenization import Tokenizer
 from common.word_vector import WordEmbedding
 from model.AttentionText.attention_text import Attention
@@ -76,14 +78,14 @@ class BaseClassifier():
         """
         Initialization one hot vector the vocabulary
         """
-        self.embedding = []
         self.embedding_size = len(self.vocab)
-        self.embedding.append(np.zeros(self.embedding_size))
+        self.embedding = np.zeros(
+            (self.vocab_size, self.embedding_size), dtype=np.int32
+        )
+        # self.embedding.append(np.zeros(self.embedding_size))
         for ch, idx in self.vocab.items():
-            one_hot = np.zeros(self.embedding_size)
-            one_hot[idx] = 1
-            self.embedding.append(one_hot)
-        self.embedding = np.array(self.embedding)
+            self.embedding[idx][idx] = 1
+        # self.embedding = np.array(self.embedding)
 
     def __init_wv_embedding(self):
         """
@@ -103,13 +105,28 @@ class BaseClassifier():
     def __init_w2i(self, tokenized_corpus):
         """
         Initialization of vocabulary and the index of the vocabulary
+        :param tokenized_corpus: string inside 2 depth list or 3 depth list.
+            Ex 2d: [["token", "seq", "data1"]]
+            Ex 3d: [[
+                ["token", "seq", "sent1", "data1"],
+                ["token", "seq", "sent2", "data1]
+            ]]
+
         """
+        # Handle 3D tokenized input
+        if isinstance(tokenized_corpus[0][0], list):
+            tokenized_corpus = [
+                list(itertools.chain.from_iterable(data))
+                for data in tokenized_corpus
+            ]
         special_token = self.add_special_token()
         tokenizer = Tokenizer(self.vocab_size)
         for idx, token in enumerate(special_token):
             tokenizer.vocab_index[token] = idx
         tokenizer.build_vocab(tokenized_corpus)
         self.vocab = tokenizer.vocab_index
+        if len(self.vocab) < self.vocab_size:
+            self.vocab_size = len(self.vocab)
 
     def add_special_token(self):
         return ["[UNK]"]
@@ -124,10 +141,7 @@ class BaseClassifier():
         for text in corpus:
             idx_list = []
             for idx, token in enumerate(text):
-                if token in self.vocab:
-                    idx_list.append(self.vocab[token])
-                else:
-                    idx_list.append(0)
+                idx_list.append(self.vocab.get(token, 0))
             v_input.append(idx_list)
         return pad_sequences(v_input, self.max_input, padding='post')
 
