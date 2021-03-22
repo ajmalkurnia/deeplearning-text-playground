@@ -9,15 +9,13 @@ import numpy as np
 
 class HANClassifier(BaseClassifier):
     def __init__(
-        self, input_shape=(100, 30), rnn_size=100, lowest_level="char",
-        dropout=0.2, rnn_type="gru",
+        self, input_shape=(100, 30), rnn_size=100, dropout=0.2, rnn_type="gru",
         **kwargs
     ):
         kwargs["max_input"] = input_shape[1]
         super(HANClassifier, self).__init__(**kwargs)
 
         self.max_input_length = input_shape[0]
-        self.lowest_level = lowest_level
         self.rnn_size = rnn_size
         self.dropout = dropout
         self.rnn_type = rnn_type
@@ -84,8 +82,18 @@ class HANClassifier(BaseClassifier):
             "rnn_size": self.rnn_size,
             "dropout": self.dropout,
             "rnn_type": self.rnn_type,
-            "max_input_length": self.max_input_length,
-            "lowest_level": "char"
+            "max_input_length": self.max_input_length
         }
 
-    def load_class_param(self): pass
+    def load_class_param(self, class_param):
+        self.max_input = class_param["input_size"]
+        self.label2idx = class_param["l2i"]
+        self.idx2label = class_param["i2l"]
+        self.vocab = class_param["vocab"]
+        self.embedding_size = class_param["embedding_size"]
+        self.optimizer = class_param["optimizer"]
+        self.loss = class_param["loss"]
+        self.rnn_size = class_param["rnn_size"]
+        self.dropout = class_param["dropout"]
+        self.rnn_type = class_param["rnn_type"]
+        self.max_input_length = class_param["max_input_length"]
