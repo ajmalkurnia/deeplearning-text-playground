@@ -10,6 +10,7 @@ def get_args():
     subparser = rnn_args(subparser)
     subparser = cnn_args(subparser)
     subparser = transformer_args(subparser)
+    subparser = han_args(subparser)
     return parser
 
 
@@ -32,7 +33,7 @@ def base_embedding_args(parser):
         "--embeddingfile", type=str, help="Pretrained word embedding filepath"
     )
     group.add_argument(
-        "--embeddingtype", type=str, choices={"w2v", "ft"},
+        "--embeddingtype", type=str, choices={"w2v", "ft", "onehot", "custom"},
         help="Word embedding type"
     )
     return parser
@@ -107,6 +108,7 @@ def transformer_args(subparser):
         "--positional", action="store_true",
         help="Initialized positinal embedding with sincos"
     )
+    return subparser
 
 
 def han_args(subparser):
@@ -121,5 +123,6 @@ def han_args(subparser):
         choices={"lstm", "gru"}, default="lstm"
     )
     han_parser.add_argument(
-        "--dropout", type=float, help="Droupout value", default=0.5
+        "--dropout", type=float, help="Droupout value", default=0.2
     )
+    return subparser

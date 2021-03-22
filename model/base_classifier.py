@@ -8,7 +8,7 @@ from zipfile import ZipFile
 from tempfile import TemporaryDirectory
 import numpy as np
 import pickle
-from itertools.chain import from_iterable
+import itertools
 
 from common.tokenization import Tokenizer
 from common.word_vector import WordEmbedding
@@ -78,14 +78,14 @@ class BaseClassifier():
         """
         Initialization one hot vector the vocabulary
         """
-        self.embedding = []
         self.embedding_size = len(self.vocab)
-        self.embedding.append(np.zeros(self.embedding_size))
+        self.embedding = np.zeros(
+            (self.vocab_size, self.embedding_size), dtype=np.int32
+        )
+        # self.embedding.append(np.zeros(self.embedding_size))
         for ch, idx in self.vocab.items():
-            one_hot = np.zeros(self.embedding_size)
-            one_hot[idx] = 1
-            self.embedding.append(one_hot)
-        self.embedding = np.array(self.embedding)
+            self.embedding[idx][idx] = 1
+        # self.embedding = np.array(self.embedding)
 
     def __init_wv_embedding(self):
         """
@@ -116,7 +116,8 @@ class BaseClassifier():
         # Handle 3D tokenized input
         if isinstance(tokenized_corpus[0][0], list):
             tokenized_corpus = [
-                list(from_iterable(*data)) for data in tokenized_corpus
+                list(itertools.chain.from_iterable(data))
+                for data in tokenized_corpus
             ]
         special_token = self.add_special_token()
         tokenizer = Tokenizer(self.vocab_size)
@@ -124,6 +125,8 @@ class BaseClassifier():
             tokenizer.vocab_index[token] = idx
         tokenizer.build_vocab(tokenized_corpus)
         self.vocab = tokenizer.vocab_index
+        if len(self.vocab) < self.vocab_size:
+            self.vocab_size = len(self.vocab)
 
     def add_special_token(self):
         return ["[UNK]"]
