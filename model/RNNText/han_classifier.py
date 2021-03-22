@@ -12,6 +12,25 @@ class HANClassifier(BaseClassifier):
         self, input_shape=(50, 10), rnn_size=100, dropout=0.2, rnn_type="gru",
         **kwargs
     ):
+        """
+        Hierarchical Attention Classifier (HAN) constructor,
+        Refer to Yang, Z. (2016)
+        Beware that the input size of this classifier is a 3D arrays:
+            data -> sequence -> subsequence, which can be arranged as:
+                data -> token -> char, [[["t", "o", "k", "e", "n"]]], or
+                data -> sentence -> token, [[["token", "in", "sentence"]]]
+        The original paper used this architecture for document classification
+            using second input example
+        :param input_shape: tuple (int, int), maximum input shape
+            the first element refer to maximum length of a data /
+                maximum number of sequence in a data
+            the second element refer to maximum length of a sequence /
+                maximum number of sub-sequence in a sequence
+        :param rnn_size: int, number of rnn hidden units
+        :param dropout: float, dropout rate (before softmax)
+        :param rnn_type: string, the type of rnn cell, available option:
+            gru or lstm
+        """
         kwargs["input_size"] = input_shape[1]
         super(HANClassifier, self).__init__(**kwargs)
 
@@ -21,6 +40,7 @@ class HANClassifier(BaseClassifier):
         self.rnn_type = rnn_type
 
     def init_model(self):
+        # Start of lower block (sequence encoder)
         input_layer = Input(shape=(self.max_input, ))
         embedding_layer = Embedding(
             input_dim=self.vocab_size, output_dim=self.embedding_size,
@@ -28,25 +48,24 @@ class HANClassifier(BaseClassifier):
             embeddings_initializer=self.embedding,
             trainable=self.train_embedding
         )(input_layer)
-
         rnn_out = self.__get_rnn(embedding_layer)
-        # out_h = Concatenate()([out_f, out_b])
         lower_attention = Attention("hierarchy")([rnn_out])
         lower_encoder = Model(inputs=input_layer, outputs=lower_attention)
         lower_encoder.summary()
 
+        # Start of higher block (sub-sequence encoder)
         higher_input = Input(shape=(self.max_input_length, self.max_input))
+        # run the lower encoder in time distributed fashion
         dist_lower_encoder = TimeDistributed(lower_encoder)(higher_input)
         rnn_out = self.__get_rnn(dist_lower_encoder)
-        # out_h = Concatenate()])
         higher_attention = Attention("hierarchy")([rnn_out])
 
+        # Classifier
         do = Dropout(self.dropout)(higher_attention)
         out = Dense(self.n_label, activation="softmax")(do)
         self.model = Model(higher_input, out)
         self.model.compile(
-            optimizer=self.optimizer, loss=self.loss, metrics=["accuracy"],
-            sample_weight_mode="temporal"
+            optimizer=self.optimizer, loss=self.loss, metrics=["accuracy"]
         )
         self.model.summary()
 
@@ -62,6 +81,13 @@ class HANClassifier(BaseClassifier):
         return rnn_out
 
     def vectorized_input(self, tokenized_corpus):
+        """
+        Handling vectorization of 3D tokenized corpus as input since the
+            BaseClassifier only handles 2D input
+        :param tokenized_corpus: list of list of list of string,
+            tokenized corpus with grouped sequence
+        :return vector_input: 3D numpy array, indexed sequence of input corpus
+        """
         vector_input = np.zeros(
             (len(tokenized_corpus), self.max_input_length, self.max_input),
             dtype=np.int32
