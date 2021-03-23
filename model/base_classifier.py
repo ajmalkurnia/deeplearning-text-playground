@@ -79,13 +79,9 @@ class BaseClassifier():
         Initialization one hot vector the vocabulary
         """
         self.embedding_size = len(self.vocab)
-        self.embedding = np.zeros(
-            (self.vocab_size, self.embedding_size), dtype=np.int32
+        self.embedding = np.eye(
+            self.vocab_size, dtype=np.int32
         )
-        # self.embedding.append(np.zeros(self.embedding_size))
-        for ch, idx in self.vocab.items():
-            self.embedding[idx][idx] = 1
-        # self.embedding = np.array(self.embedding)
 
     def __init_wv_embedding(self):
         """
