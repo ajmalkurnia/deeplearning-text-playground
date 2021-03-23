@@ -22,17 +22,24 @@ class BaseClassifier():
     def __init__(
         self, input_size=50, optimizer="adam", loss="categorical_crossentropy",
         embedding_matrix=None, vocab_size=0, vocab=None, embedding_file=None,
-        embedding_type="glorot_uniform", embedding_size=100, train_embedding=True
+        embedding_type="glorot_uniform", embedding_size=100,
+        train_embedding=True
     ):
+        # TODO supports class argument for optimizer and loss function
         """
         Class constructor
         :param input_size: int, maximum number of token input
-        :param optimizer: string, learning optimizer (keras model "optimizer")
-        :param loss: string, loss function
+        :param optimizer: string, learning optimizer
+            ("optimizer" parameter during compile)
+        :param loss: string, loss function ("loss" parameter during compile)
+            currently the optimizer and string only supports string,
+            class argument will be added in the future
         :param embedding matrix: numpy array,
             Custom embedding matrix of the provided vocab
         :param vocab size: int, maximum size of vocabulary of the model
             (most frequent word of the training data will be used)
+        :param vocab: dictionary, the vocabulary index, a dictionary with
+            token as keys, and index as value
         :param embedding_file: string, path to embedding file
         :param embedding_type: string, embedding type
             w2v for word2vec, matrix will be taken from embedding file
@@ -40,6 +47,8 @@ class BaseClassifier():
             onehot, initialize one hot encoding of vocabulary
             custom, use embedding matrix
             or any valid keras.initializer string
+        :param emebdding_size: int, the size of embedding output
+            only useful when using non-pretrained/generated embedding
         :param train_embedding: boolean,
             trainable parameter on Embedding layer
             which apparently not recommended when using pretrained weight
@@ -290,6 +299,7 @@ class BaseClassifier():
 
     def load(self, filepath):
         """
+        TODO: static load method
         Load model from the saved zipfile
         :param filepath: path to model zip file
         """
