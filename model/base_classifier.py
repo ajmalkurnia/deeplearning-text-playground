@@ -22,7 +22,7 @@ class BaseClassifier():
     def __init__(
         self, input_size=50, optimizer="adam", loss="categorical_crossentropy",
         embedding_matrix=None, vocab_size=0, vocab=None, embedding_file=None,
-        embedding_type="glorot_uniform", train_embedding=True
+        embedding_type="glorot_uniform", embedding_size=100, train_embedding=True
     ):
         """
         Class constructor
@@ -57,6 +57,7 @@ class BaseClassifier():
         self.vocab = vocab
         self.train_embedding = train_embedding
         self.embedding_type = embedding_type
+        self.embedding_size = embedding_size
         if self.embedding:
             self.embedding_size = self.embedding.shape[1]
             self.vocab_size = len(vocab)
