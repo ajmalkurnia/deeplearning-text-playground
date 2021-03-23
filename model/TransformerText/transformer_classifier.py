@@ -36,32 +36,8 @@ class TransformerClassifier(BaseClassifier):
             cls, prepend [CLS] token in the sequence, then take
                 attention embedding of [CLS] as sequence embedding (BERT style)
             global_avg, use GlobalAveragePool1D
-        :param input_size: int, maximum number of token input
-        :param optimizer: string, learning optimizer
-            ("optimizer" parameter during compile)
-        :param loss: string, loss function ("loss" parameter during compile)
-            currently the optimizer and string only supports string,
-            class argument will be added in the future
-        :param embedding matrix: numpy array,
-            Custom embedding matrix of the provided vocab
-        :param vocab size: int, maximum size of vocabulary of the model
-            (most frequent word of the training data will be used)
-        :param vocab: dictionary, the vocabulary index, a dictionary with
-            token as keys, and index as value
-        :param embedding_file: string, path to embedding file
-        :param embedding_type: string, embedding type
-            w2v for word2vec, matrix will be taken from embedding file
-            ft for FasText, matrix will be taken from embedding file
-            onehot, initialize one hot encoding of vocabulary
-            custom, use embedding matrix
-            or any valid keras.initializer string
-        :param emebdding_size: int, the size of embedding output
-            only useful when using non-pretrained/generated embedding
-        :param train_embedding: boolean,
-            trainable parameter on Embedding layer
-            which apparently not recommended when using pretrained weight
-            refer -> https://keras.io/examples/nlp/pretrained_word_embeddings/
         """
+        self.__doc__ = BaseClassifier.__doc__
         super(TransformerClassifier, self).__init__(**kwargs)
         self.n_blocks = n_blocks
         self.dim_ff = dim_ff
