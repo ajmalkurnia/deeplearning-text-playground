@@ -17,16 +17,20 @@ def main(args):
     print("Tokenize text")
     tokenizer = NLTKToknizerWrapper(False)
     df["token"] = df["text"].apply(lambda t: tokenizer.tokenize(t.lower()))
-
-    X = df["token"].values.tolist()
-    y = df["label"].values.tolist()
-
     # optional preprocessing
     print("Preprocessing")
-    X = [[remove_characters(token) for token in tokens] for tokens in X]
-    X = [list(filter(lambda x: x != '', tokens)) for tokens in X]
     id_stopwords = stopwords.words('indonesian')
-    X = [remove_words(tokens, id_stopwords) for tokens in X]
+    cleaned_corpus = []
+    for tokens in df["token"]:
+        tmp = []
+        for token in tokens:
+            cleaned_token = remove_characters(token)
+            if cleaned_token.strip():
+                tmp.append(cleaned_token)
+        cleaned_corpus.append(remove_words(tmp, id_stopwords))
+
+    X = cleaned_corpus
+    y = df["label"].values.tolist()
 
     # split
     print("Split Data")
