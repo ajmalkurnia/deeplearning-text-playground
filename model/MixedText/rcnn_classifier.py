@@ -12,16 +12,17 @@ class RCNNClassifier(BaseClassifier):
     ):
         """
         Class constructor
-        :param rnn_size: int, the size of rnn units
-        :param rnn_type: string, rnn cell type to be used "lstm"/"gru"
-        :param conv_filter: int, number of filter on convolution layer
-        :param fcn_layer: list of tuple, configuration of fcn layer,
-            after convolution, each tuple is after consist of:
-                [int] number of units,
-                [float] dropout after fcn layer,
-                [string] activation function,
+
+            :param rnn_size: int, the size of rnn units
+            :param rnn_type: string, rnn cell type to be used "lstm"/"gru"
+            :param conv_filter: int, number of filter on convolution layer
+            :param fcn_layer: list of tuple, configuration of fcn layer,
+                after convolution, each tuple is after consist of:
+                    [int] number of units,
+                    [float] dropout after fcn layer,
+                    [string] activation function,
         """
-        self.__doc__ = self.__doc__ + super().__doc__
+        self.__doc__ = self.__doc__ + BaseClassifier.__doc__
         super(RCNNClassifier, self).__init__(**kwargs)
         self.rnn_size = rnn_size
         self.rnn_type = rnn_type

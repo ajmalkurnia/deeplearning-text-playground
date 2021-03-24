@@ -27,30 +27,31 @@ class BaseClassifier():
     ):
         """
         Class constructor
-        :param input_size: int, maximum number of token input
-        :param optimizer: string, learning optimizer of the model
-            ("optimizer" parameter during compile)
-        :param loss: string, loss function of the model
-            ("loss" parameter during compile)
-        :param embedding matrix: numpy array,
-            Custom embedding matrix of the provided vocab
-        :param vocab size: int, maximum size of vocabulary of the model
-            (most frequent word of the training data will be used)
-        :param vocab: dictionary, the vocabulary index, a dictionary with
-            token as keys, and index as value
-        :param embedding_file: string, path to embedding file
-        :param embedding_type: string, embedding type
-            w2v for word2vec, matrix will be taken from embedding file
-            ft for FasText, matrix will be taken from embedding file
-            onehot, initialize one hot encoding of vocabulary
-            custom, use embedding matrix
-            or any valid keras.initializer string
-        :param emebdding_size: int, the size of embedding output
-            only useful when using non-pretrained/generated embedding
-        :param train_embedding: boolean,
-            trainable parameter on Embedding layer
-            which apparently not recommended when using pretrained weight
-            refer -> https://keras.io/examples/nlp/pretrained_word_embeddings/
+
+            :param input_size: int, maximum number of token input
+            :param optimizer: string, learning optimizer of the model
+                ("optimizer" parameter during compile)
+            :param loss: string, loss function of the model
+                ("loss" parameter during compile)
+            :param embedding matrix: numpy array,
+                Custom embedding matrix of the provided vocab
+            :param vocab size: int, maximum size of vocabulary of the model
+                (most frequent word of the training data will be used)
+            :param vocab: dictionary, the vocabulary index, a dictionary with
+                token as keys, and index as value
+            :param embedding_file: string, path to embedding file
+            :param embedding_type: string, embedding type
+                w2v for word2vec, matrix will be taken from embedding file
+                ft for FasText, matrix will be taken from embedding file
+                onehot, initialize one hot encoding of vocabulary
+                custom, use embedding matrix
+                or any valid keras.initializer string
+            :param emebdding_size: int, the size of embedding output
+                only useful when using non-pretrained/generated embedding
+            :param train_embedding: boolean,
+                trainable parameter on Embedding layer
+                which apparently not recommended when using pretrained weight
+                refer->https://keras.io/examples/nlp/pretrained_word_embeddings/
         """
         self.vocab_size = vocab_size
         self.label2idx = None

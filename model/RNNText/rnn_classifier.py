@@ -12,12 +12,12 @@ class RNNClassifier(BaseClassifier):
         **kwargs
     ):
         """
-        :param rnn_size: int, RNN hidden unit
-        :param dropout: float, [0.0, 1.0] dropout just before softmax layer
-        :param rnn_type: string, RNN memory type, "gru"/"lstm"
-        :param attention: string, attention type choice available:
-            dot|scale|general|location|add|self,
-            set None do not want to use attention mechanism
+            :param rnn_size: int, RNN hidden unit
+            :param dropout: float, [0.0, 1.0] dropout just before softmax layer
+            :param rnn_type: string, RNN memory type, "gru"/"lstm"
+            :param attention: string, attention type choice available:
+                dot|scale|general|location|add|self,
+                set None do not want to use attention mechanism
         """
         self.__doc__ = BaseClassifier.__doc__
         super(RNNClassifier, self).__init__(**kwargs)

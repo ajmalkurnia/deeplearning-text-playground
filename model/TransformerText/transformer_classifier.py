@@ -18,24 +18,26 @@ class TransformerClassifier(BaseClassifier):
     ):
         """
         Transformer classifier's construction method
-        :param n_blocks: int, number of transformer stack
-        :param dim_ff: int, hidden unit on fcn layer in transformer
-        :param dropout: float, dropout value
-        :param n_heads: int, number of attention heads
-        :param attention_dim: int, number of attention dimension
-            this value will be overidden if using custom embedding matrix
-        :param pos_embedding_init: bool, Initialize posiitonal embedding with
-            sincos function, or else will be initialize with glorot)uniform
-        :param fcn_layers: list of tupple, configuration of each
-            fcn layer after transformer, each tupple consist of:
-                [int] number of units,
-                [float] dropout after fcn layer,
-                [string] activation function
-        :param sequence_embedding: string, a method how to get
-            representation of entire sequences extract, available option:
-            cls, prepend [CLS] token in the sequence, then take
-                attention embedding of [CLS] as sequence embedding (BERT style)
-            global_avg, use GlobalAveragePool1D
+            :param n_blocks: int, number of transformer stack
+            :param dim_ff: int, hidden unit on fcn layer in transformer
+            :param dropout: float, dropout value
+            :param n_heads: int, number of attention heads
+            :param attention_dim: int, number of attention dimension
+                this value will be overidden if using custom embedding matrix
+            :param pos_embedding_init: bool, Initialize posiitonal embedding
+                with sincos function, or else will be initialize with
+                "glorot_uniform"
+            :param fcn_layers: list of tupple, configuration of each
+                fcn layer after transformer, each tupple consist of:
+                    [int] number of units,
+                    [float] dropout after fcn layer,
+                    [string] activation function
+            :param sequence_embedding: string, a method how to get
+                representation of entire sequences extract, available option:
+                cls, prepend [CLS] token in the sequence, then take
+                    attention embedding of [CLS] as sequence embedding
+                    (BERT style)
+                global_avg, use GlobalAveragePool1D
         """
         self.__doc__ = BaseClassifier.__doc__
         super(TransformerClassifier, self).__init__(**kwargs)

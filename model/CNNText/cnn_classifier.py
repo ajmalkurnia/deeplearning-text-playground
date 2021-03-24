@@ -14,30 +14,30 @@ class CNNClassifier(BaseClassifier):
     ):
         """
         Class constructor
-        :param conv_layers: list of tupple,
-            A list of parameter for convolution layers,
-            each tupple for one convolution layer that consist of : [
-                (int) Number of filter,
-                (int) filter size,
-                (int) maxpooling (-1 to skip),
-                (string) activation function
-            ]
-        :param fcn_layers: list of tupple, parameter for Dense layer
-            each tupple for one FC layer,
-            final layer (softmax) will be automatically added in,
-            each tupple consist of: [
-                (int) Number of unit,
-                (float) dropout (-1 to skip),
-                (string) activation function
-            ]
-        :param conv_type: string, Set how the convolution will be performed
-            available options: parallel/sequence
-            parallel: each cnn layer from conv_layers will run against
-                embedding matrix directly, the result will be concatenated,
-                Refer to Yoon Kim 2014
-            sequence: cnn layer from conv_layers will stacked sequentially,
-                commonly used for character level CNN,
-                on word level CNN parallel is recommended
+            :param conv_layers: list of tupple,
+                A list of parameter for convolution layers,
+                each tupple for one convolution layer that consist of : [
+                    (int) Number of filter,
+                    (int) filter size,
+                    (int) maxpooling (-1 to skip),
+                    (string) activation function
+                ]
+            :param fcn_layers: list of tupple, parameter for Dense layer
+                each tupple for one FC layer,
+                final layer (softmax) will be automatically added in,
+                each tupple consist of: [
+                    (int) Number of unit,
+                    (float) dropout (-1 to skip),
+                    (string) activation function
+                ]
+            :param conv_type: string, Set how the convolution will be performed
+                available options: parallel/sequence
+                parallel: each cnn layer from conv_layers will run against
+                    embedding matrix directly, the result will be concatenated,
+                    Refer to Yoon Kim 2014
+                sequence: cnn layer from conv_layers will stacked sequentially,
+                    commonly used for character level CNN,
+                    on word level CNN parallel is recommended
         """
         self.__doc__ = BaseClassifier.__doc__
         self.model = None
