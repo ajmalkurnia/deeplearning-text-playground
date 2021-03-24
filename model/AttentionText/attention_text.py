@@ -51,8 +51,13 @@ class Attention(Layer):
         super(Attention, self).__init__(**kwargs)
 
     def build(self, input_shape):
-        self.feature = input_shape[0][-1]
-        self.maxlen = input_shape[0][1]
+        try:
+            self.feature = input_shape[0][-1]
+            self.maxlen = input_shape[0][1]
+        except TypeError:
+            self.feature = input_shape[-1]
+            self.maxlen = input_shape[1]
+
         if self.score in ["general", "location"]:
             self.W1 = Dense(self.feature, name="key_att")
         elif self.score == "add":
@@ -124,10 +129,10 @@ class Attention(Layer):
                 context_vector, shape (Batch, Feature)
                 attention_weight, shape (Batch, Sequence, 1)
         """
-        if len(inputs) == 2:
+        if isinstance(inputs, list):
             query, key = inputs
         else:
-            query, key = inputs[0], None
+            query, key = inputs, None
 
         if key is not None:
             key = tf.expand_dims(key, 1)
@@ -149,7 +154,6 @@ class Attention(Layer):
             context_vector = Lambda(
                 lambda x: K.sum(x, axis=1)
             )(attention_matrix)
-            # tf.reduce_sum(attention_matrix, axis=1)
 
         if self.return_attention:
             return [context_vector, attention_weights]

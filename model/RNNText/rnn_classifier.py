@@ -20,6 +20,7 @@ class RNNClassifier(BaseClassifier):
             set None do not want to use attention mechanism
         """
         self.__doc__ = BaseClassifier.__doc__
+        super(RNNClassifier, self).__init__(**kwargs)
         self.rnn_size = rnn_size
         self.rnn_type = rnn_type
         self.dropout = dropout
@@ -28,8 +29,6 @@ class RNNClassifier(BaseClassifier):
             self.return_seq = True
         else:
             self.return_seq = False
-
-        super().__init__(**kwargs)
 
     def init_model(self):
         """
@@ -98,16 +97,30 @@ class RNNClassifier(BaseClassifier):
             "return_seq": self.return_seq
         }
 
-    def load_class_param(self, class_param):
-        self.max_input = class_param["input_size"]
-        self.label2idx = class_param["l2i"]
-        self.idx2label = class_param["i2l"]
-        self.vocab = class_param["vocab"]
-        self.embedding_size = class_param["embedding_size"]
-        self.optimizer = class_param["optimizer"]
-        self.loss = class_param["loss"]
-        self.rnn_size = class_param["rnn_size"]
-        self.rnn_type = class_param["rnn_type"]
-        self.dropout = class_param["dropout"]
-        self.attention = class_param["attention"]
-        self.return_seq = class_param["return_seq"]
+    @staticmethod
+    def get_construtor_param(param):
+        return {
+            "input_size": param["input_size"],
+            "vocab": param["vocab"],
+            "embedding_size": param["embedding_size"],
+            "optimizer": param["optimizer"],
+            "loss": param["loss"],
+            "rnn_size": param["rnn_size"],
+            "dropout": param["dropout"],
+            "rnn_type": param["rnn_type"],
+            "attention": param["attention"]
+        }
+
+    # def load_class_param(self, class_param):
+    #     self.max_input = class_param["input_size"]
+    #     self.label2idx = class_param["l2i"]
+    #     self.idx2label = class_param["i2l"]
+    #     self.vocab = class_param["vocab"]
+    #     self.embedding_size = class_param["embedding_size"]
+    #     self.optimizer = class_param["optimizer"]
+    #     self.loss = class_param["loss"]
+    #     self.rnn_size = class_param["rnn_size"]
+    #     self.rnn_type = class_param["rnn_type"]
+    #     self.dropout = class_param["dropout"]
+    #     self.attention = class_param["attention"]
+    #     self.return_seq = class_param["return_seq"]

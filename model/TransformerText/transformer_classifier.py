@@ -117,19 +117,20 @@ class TransformerClassifier(BaseClassifier):
             "sequence_embedding": self.sequence_embedding
         }
 
-    def load_class_param(self, class_param):
-        self.max_input = class_param["input_size"]
-        self.label2idx = class_param["l2i"]
-        self.idx2label = class_param["i2l"]
-        self.vocab = class_param["vocab"]
-        self.embedding_size = class_param["embedding_size"]
-        self.optimizer = class_param["optimizer"]
-        self.loss = class_param["loss"]
-        self.dropout = class_param["dropout"]
-        self.n_blocks = class_param["n_blocks"]
-        self.dim_ff = class_param["dim_ff"]
-        self.n_heads = class_param["n_heads"]
-        self.attention_dim = class_param["attention_dim"]
-        self.fcn_layers = class_param["fcn_layers"]
-        self.pos_embedding_init = class_param["pos_embedding"]
-        self.sequence_embedding = class_param["sequence_embedding"]
+    @staticmethod
+    def get_construtor_param(param):
+        return {
+            "input_size": param["input_size"],
+            "vocab": param["vocab"],
+            "embedding_size": param["embedding_size"],
+            "optimizer": param["optimizer"],
+            "loss": param["loss"],
+            "n_blocks": param["n_blocks"],
+            "dim_ff": param["dim_ff"],
+            "dropout": param["dropout"],
+            "n_heads": param["n_heads"],
+            "attention_dim": param["attention_dim"],
+            "pos_embedding_init": param["pos_embedding"],
+            "fcn_layers": param["fcn_layers"],
+            "sequence_embedding": param["sequence_embedding"]
+        }

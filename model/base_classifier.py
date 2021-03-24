@@ -297,7 +297,11 @@ class BaseClassifier():
                 for _, v in filenames.items():
                     zipf.write(f"{tmp_dir}/{v}")
 
-    def load(self, filepath):
+    def get_class_param(self):
+        raise NotImplementedError()
+
+    @classmethod
+    def load(cls, filepath):
         """
         TODO: static load method
         Load model from the saved zipfile
@@ -310,7 +314,7 @@ class BaseClassifier():
                 if filename.endswith(".hdf5"):
                     with TemporaryDirectory() as tmp_dir:
                         zipf.extract(filename, tmp_dir)
-                        self.model = load_model(
+                        model = load_model(
                             f"{tmp_dir}/{filename}",
                             custom_objects={
                                 "Attention": Attention,
@@ -319,15 +323,19 @@ class BaseClassifier():
                                 "MultiAttention": MultiAttention
                                 }
                         )
-                        self.model.summary()
+                        model.summary()
                 elif filename.endswith("_class.pkl"):
                     with zipf.open(filename, "r") as pkl:
                         pickle_content = pkl.read()
                         class_param = pickle.loads(pickle_content)
-                        self.load_class_param(class_param)
+            constructor_param = cls.get_construtor_param(class_param)
+            classifier = cls(**constructor_param)
+            classifier.model = model
+            classifier.label2idx = class_param["l2i"]
+            classifier.idx2label = class_param["i2l"]
+            classifier.n_label = len(classifier.label2idx)
+        return classifier
 
-    def load_class_param(self, class_param):
-        raise NotImplementedError()
-
-    def get_class_param(self):
+    @staticmethod
+    def get_construtor_param(param):
         raise NotImplementedError()

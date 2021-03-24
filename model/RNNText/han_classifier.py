@@ -49,8 +49,8 @@ class HANClassifier(BaseClassifier):
             embeddings_initializer=self.embedding,
             trainable=self.train_embedding
         )(input_layer)
-        rnn_out = self.__get_rnn(embedding_layer)
-        lower_attention = Attention("hierarchy")([rnn_out])
+        lower_rnn_out = self.__get_rnn(embedding_layer)
+        lower_attention = Attention("hierarchy")(lower_rnn_out)
         lower_encoder = Model(inputs=input_layer, outputs=lower_attention)
         lower_encoder.summary()
 
@@ -58,8 +58,8 @@ class HANClassifier(BaseClassifier):
         higher_input = Input(shape=(self.max_input_length, self.max_input))
         # run the lower encoder in time distributed fashion
         dist_lower_encoder = TimeDistributed(lower_encoder)(higher_input)
-        rnn_out = self.__get_rnn(dist_lower_encoder)
-        higher_attention = Attention("hierarchy")([rnn_out])
+        higher_rnn_out = self.__get_rnn(dist_lower_encoder)
+        higher_attention = Attention("hierarchy")(higher_rnn_out)
 
         # Classifier
         do = Dropout(self.dropout)(higher_attention)
@@ -118,15 +118,16 @@ class HANClassifier(BaseClassifier):
             "max_input_length": self.max_input_length
         }
 
-    def load_class_param(self, class_param):
-        self.max_input = class_param["input_size"]
-        self.label2idx = class_param["l2i"]
-        self.idx2label = class_param["i2l"]
-        self.vocab = class_param["vocab"]
-        self.embedding_size = class_param["embedding_size"]
-        self.optimizer = class_param["optimizer"]
-        self.loss = class_param["loss"]
-        self.rnn_size = class_param["rnn_size"]
-        self.dropout = class_param["dropout"]
-        self.rnn_type = class_param["rnn_type"]
-        self.max_input_length = class_param["max_input_length"]
+    @staticmethod
+    def get_construtor_param(param):
+        return {
+            "input_size": param["input_size"],
+            "vocab": param["vocab"],
+            "embedding_size": param["embedding_size"],
+            "optimizer": param["optimizer"],
+            "loss": param["loss"],
+            "input_shape": (param["max_input_length"], param["input_size"]),
+            "rnn_size": param["rnn_size"],
+            "dropout": param["dropout"],
+            "rnn_type": param["rnn_type"]
+        }

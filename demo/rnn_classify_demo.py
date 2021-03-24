@@ -15,12 +15,11 @@ def main(args, data):
         "rnn_size": args.unitrnn,
         "dropout": args.dropout,
         "rnn_type": args.typernn,
-        "attention": "self"
+        "attention": args.attention
     }
 
     if args.loadmodel:
-        rnn = RNNClassifier()
-        rnn.load(args.loadmodel)
+        rnn = RNNClassifier.load(args.loadmodel)
     else:
         rnn = RNNClassifier(**arch_config)
         print("Training")

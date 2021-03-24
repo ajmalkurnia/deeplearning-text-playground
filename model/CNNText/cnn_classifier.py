@@ -107,19 +107,15 @@ class CNNClassifier(BaseClassifier):
             "fcn_layers": self.fcn_layers
         }
 
-    def load_class_param(self, class_param):
-        """
-        Load model from the saved zipfile
-        :param filepath: path to model zip file
-        """
-        self.max_input = class_param["input_size"]
-        self.label2idx = class_param["l2i"]
-        self.idx2label = class_param["i2l"]
-        self.vocab = class_param["vocab"]
-        self.embedding_size = class_param["embedding_size"]
-        self.optimizer = class_param["optimizer"]
-        self.loss = class_param["loss"]
-        self.conv_layers = class_param["conv_layers"]
-        self.conv_type = class_param["conv_type"]
-        self.fcn_layers = class_param["fcn_layers"]
-        self.n_label = len(self.label2idx)
+    @staticmethod
+    def get_construtor_param(param):
+        return {
+            "input_size": param["input_size"],
+            "vocab": param["vocab"],
+            "embedding_size": param["embedding_size"],
+            "optimizer": param["optimizer"],
+            "loss": param["loss"],
+            "conv_layers": param["conv_layers"],
+            "conv_type": param["conv_type"],
+            "fcn_layers": param["fcn_layers"]
+        }

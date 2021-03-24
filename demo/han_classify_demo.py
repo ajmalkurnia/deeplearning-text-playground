@@ -23,19 +23,18 @@ def main(args, data):
     }
 
     if args.loadmodel:
-        rnn = HANClassifier()
-        rnn.load(args.loadmodel)
+        han = HANClassifier.load(args.loadmodel)
     else:
-        rnn = HANClassifier(**arch_config)
+        han = HANClassifier(**arch_config)
         print("Training")
-        rnn.train(
+        han.train(
             X_train, y_train, args.epoch, args.batchsize,
             (X_val, y_val), args.checkpoint
         )
     print("Testing")
-    y_pred = rnn.test(X_test)
+    y_pred = han.test(X_test)
     # evaluation report
     print(classification_report(y_test, y_pred))
     if args.savemodel:
         print("Saving file")
-        rnn.save(args.savemodel)
+        han.save(args.savemodel)

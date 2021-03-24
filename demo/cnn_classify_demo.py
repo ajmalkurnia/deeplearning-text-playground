@@ -33,8 +33,7 @@ def main(args, data):
             (1024, 0.5, "relu")
         ]
     if args.loadmodel:
-        cnn = CNNClassifier()
-        cnn.load(args.loadmodel)
+        cnn = CNNClassifier.load(args.loadmodel)
     else:
         cnn = CNNClassifier(**arch_config)
         print("Training")
