@@ -100,8 +100,6 @@ class CNNClassifier(BaseClassifier):
             "i2l": self.idx2label,
             "vocab": self.vocab,
             "embedding_size": self.embedding_size,
-            "optimizer": self.optimizer,
-            "loss": self.loss,
             "conv_layers": self.conv_layers,
             "conv_type": self.conv_type,
             "fcn_layers": self.fcn_layers
@@ -113,8 +111,6 @@ class CNNClassifier(BaseClassifier):
             "input_size": param["input_size"],
             "vocab": param["vocab"],
             "embedding_size": param["embedding_size"],
-            "optimizer": param["optimizer"],
-            "loss": param["loss"],
             "conv_layers": param["conv_layers"],
             "conv_type": param["conv_type"],
             "fcn_layers": param["fcn_layers"]
