@@ -8,11 +8,11 @@ Playing with some deep learning for various text proccesing task, mainly using k
 3. Attention Mechanism with RNN
 4. Transformers
 5. Hierarchical Attention Network (HAN) (**Classifier Only**)
-6. Recurrent Convolutional Neural Networks (RCNN) (_In-Progress_)
+6. Recurrent Convolutional Neural Networks (RCNN) (**Classifier Only**)
 
 ## Task:
-1. Classification (_In-progress_)
-2. Sequence Tagging
+1. Classification
+2. Sequence Tagging (**In-Progress**)
 3. Sequence-to-Sequence
 4. Text Generation
 
@@ -21,12 +21,12 @@ Playing with some deep learning for various text proccesing task, mainly using k
 `label,text`
 
 - Run the demo
-`python3 main.py -d {path_to_datafile} [cnn|rnn]`
+`python3 main.py -d {path_to_datafile} [cnn|rnn|transformer|han|rcnn]`
 
 - to see available option, Run
-`python3 main.py --help` or `python3 main.py [cnn|rnn] --help`
+`python3 main.py --help` or `python3 main.py [cnn|rnn|transformer|han|rcnn] --help`
 
-In the future a jupyter notebook for each task will be added for a simple demo
+There is jupyter notebook available for each task (so far only classification) that both provides detailed explanation of the usage
 
 ## Dependencies
 - tensorflow==2.4.1
