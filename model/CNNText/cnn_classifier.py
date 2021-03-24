@@ -39,7 +39,7 @@ class CNNClassifier(BaseClassifier):
                     commonly used for character level CNN,
                     on word level CNN parallel is recommended
         """
-        self.__doc__ = BaseClassifier.__doc__
+        # self.__doc__ = BaseClassifier.__doc__
         self.model = None
         self.conv_layers = conv_layers
         self.conv_type = conv_type

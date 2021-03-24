@@ -32,7 +32,7 @@ class HANClassifier(BaseClassifier):
             :param rnn_type: string, the type of rnn cell, available option:
                 gru or lstm
         """
-        self.__doc__ = BaseClassifier.__doc__
+        # self.__doc__ = BaseClassifier.__doc__
         kwargs["input_size"] = input_shape[1]
         super(HANClassifier, self).__init__(**kwargs)
 

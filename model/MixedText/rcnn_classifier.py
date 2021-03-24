@@ -8,7 +8,7 @@ from model.base_classifier import BaseClassifier
 class RCNNClassifier(BaseClassifier):
     def __init__(
         self, rnn_size=100, rnn_type="lstm", conv_filter=128,
-        fcn_layer=[(256, 0.2, "relu")], **kwargs
+        fcn_layers=[(256, 0.2, "relu")], **kwargs
     ):
         """
         Class constructor
@@ -16,17 +16,18 @@ class RCNNClassifier(BaseClassifier):
             :param rnn_size: int, the size of rnn units
             :param rnn_type: string, rnn cell type to be used "lstm"/"gru"
             :param conv_filter: int, number of filter on convolution layer
-            :param fcn_layer: list of tuple, configuration of fcn layer,
+            :param fcn_layers: list of tuple, configuration of fcn layer,
                 after convolution, each tuple is after consist of:
                     [int] number of units,
                     [float] dropout after fcn layer,
                     [string] activation function,
         """
-        self.__doc__ = self.__doc__ + BaseClassifier.__doc__
+
+        # self.__doc__ = self.__doc__ + BaseClassifier.__doc__
         super(RCNNClassifier, self).__init__(**kwargs)
         self.rnn_size = rnn_size
         self.rnn_type = rnn_type
-        self.fcn_layer = fcn_layer
+        self.fcn_layers = fcn_layers
         self.conv_filter = conv_filter
 
     def init_model(self):
@@ -40,21 +41,21 @@ class RCNNClassifier(BaseClassifier):
         center_embedding = embedding_layer(input_layer)
         # Get left context by shifting the data to the right
         left_context = Lambda(
-            lambda center: Concatenate(axis=1)([
-                K.zeros((center.shape[0], 1, center.shape[1])), center[:, :-1]
-            ])
+            lambda center: K.concatenate([
+                center[:, :1], center[:, :-1]
+            ], axis=1)
         )(center_embedding)
         left_context_rnn = self.__get_rnn()(
-            self.units, return_sequences=True
+            self.rnn_size, return_sequences=True
         )(left_context)
         # Get right context by shifting the data to the left
         right_context = Lambda(
-            lambda center: Concatenate(axis=1)([
-                center[:, 1:], K.zeros((center.shape[0], 1, center.shape[1]))
-            ])
+            lambda center: K.concatenate([
+                center[:, 1:], center[:, -1:]
+            ], axis=1)
         )(center_embedding)
         right_context_rnn = self.__get_rnn()(
-            self.units, return_sequences=True, go_backwards=True
+            self.rnn_size, return_sequences=True, go_backwards=True
         )(right_context)
         # Right context processed from last to first
         right_context_rnn = Lambda(
@@ -94,18 +95,18 @@ class RCNNClassifier(BaseClassifier):
             "embedding_size": self.embedding_size,
             "rnn_size": self.rnn_size,
             "rnn_type": self.rnn_type,
-            "fcn_layer": self.fcn_layer,
+            "fcn_layers": self.fcn_layers,
             "conv_filter": self.conv_filter
         }
 
     @staticmethod
     def get_construtor_param(param):
         return {
-            "input_size": param["max_input"],
+            "input_size": param["input_size"],
             "vocab": param["vocab"],
             "embedding_size": param["embedding_size"],
             "rnn_size": param["rnn_size"],
             "rnn_type": param["rnn_type"],
-            "fcn_layer": param["fcn_layer"],
+            "fcn_layers": param["fcn_layers"],
             "conv_filter": param["conv_filter"]
         }

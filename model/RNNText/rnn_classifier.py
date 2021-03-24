@@ -19,7 +19,7 @@ class RNNClassifier(BaseClassifier):
                 dot|scale|general|location|add|self,
                 set None do not want to use attention mechanism
         """
-        self.__doc__ = BaseClassifier.__doc__
+        # self.__doc__ = BaseClassifier.__doc__
         super(RNNClassifier, self).__init__(**kwargs)
         self.rnn_size = rnn_size
         self.rnn_type = rnn_type

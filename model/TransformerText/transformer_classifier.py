@@ -39,7 +39,7 @@ class TransformerClassifier(BaseClassifier):
                     (BERT style)
                 global_avg, use GlobalAveragePool1D
         """
-        self.__doc__ = BaseClassifier.__doc__
+        # self.__doc__ = BaseClassifier.__doc__
         super(TransformerClassifier, self).__init__(**kwargs)
         self.n_blocks = n_blocks
         self.dim_ff = dim_ff
