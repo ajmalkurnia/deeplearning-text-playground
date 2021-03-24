@@ -61,7 +61,7 @@ class TransformerClassifier(BaseClassifier):
             self.model = TransformerBlock(
                 self.dim_ff, self.dropout, self.n_heads, self.attention_dim
             )(self.model)
-        # IDEA: find a way to use [CLS] token (BERT style)
+
         if self.sequence_embedding == "cls":
             self.model = Lambda(lambda x: x[:, 0, :])(self.model)
         else:

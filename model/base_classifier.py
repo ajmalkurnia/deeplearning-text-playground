@@ -25,15 +25,13 @@ class BaseClassifier():
         embedding_type="glorot_uniform", embedding_size=100,
         train_embedding=True
     ):
-        # TODO supports class argument for optimizer and loss function
         """
         Class constructor
         :param input_size: int, maximum number of token input
-        :param optimizer: string, learning optimizer
+        :param optimizer: string, learning optimizer of the model
             ("optimizer" parameter during compile)
-        :param loss: string, loss function ("loss" parameter during compile)
-            currently the optimizer and string only supports string,
-            class argument will be added in the future
+        :param loss: string, loss function of the model
+            ("loss" parameter during compile)
         :param embedding matrix: numpy array,
             Custom embedding matrix of the provided vocab
         :param vocab size: int, maximum size of vocabulary of the model
