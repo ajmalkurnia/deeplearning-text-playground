@@ -6,7 +6,10 @@ from model.base_classifier import BaseClassifier
 
 
 class RCNNClassifier(BaseClassifier):
-    def __init__(self, rnn_size, rnn_type, conv_filter, fcn_layer, **kwargs):
+    def __init__(
+        self, rnn_size=100, rnn_type="lstm", conv_filter=128,
+        fcn_layer=[(256, 0.2, "relu")], **kwargs
+    ):
         """
         Class constructor
         :param rnn_size: int, the size of rnn units
