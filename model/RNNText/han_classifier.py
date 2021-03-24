@@ -21,17 +21,18 @@ class HANClassifier(BaseClassifier):
                 data -> sentence -> token, [[["token", "in", "sentence"]]]
         The original paper used this architecture for document classification
             using second input example
-        :param input_shape: tuple (int, int), maximum input shape
-            the first element refer to maximum length of a data or
-                maximum number of sequence in a data
-            the second element refer to maximum length of a sequence or
-                maximum number of sub-sequence in a sequence
-        :param rnn_size: int, number of rnn hidden units
-        :param dropout: float, dropout rate (before softmax)
-        :param rnn_type: string, the type of rnn cell, available option:
-            gru or lstm
+
+            :param input_shape: tuple (int, int), maximum input shape
+                the first element refer to maximum length of a data or
+                    maximum number of sequence in a data
+                the second element refer to maximum length of a sequence or
+                    maximum number of sub-sequence in a sequence
+            :param rnn_size: int, number of rnn hidden units
+            :param dropout: float, dropout rate (before softmax)
+            :param rnn_type: string, the type of rnn cell, available option:
+                gru or lstm
         """
-        self.__doc__ = BaseClassifier.__doc__
+        # self.__doc__ = BaseClassifier.__doc__
         kwargs["input_size"] = input_shape[1]
         super(HANClassifier, self).__init__(**kwargs)
 

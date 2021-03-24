@@ -11,6 +11,7 @@ def get_args():
     subparser = cnn_args(subparser)
     subparser = transformer_args(subparser)
     subparser = han_args(subparser)
+    subparser = rcnn_args(subparser)
     return parser
 
 
@@ -124,5 +125,23 @@ def han_args(subparser):
     )
     han_parser.add_argument(
         "--dropout", type=float, help="Droupout value", default=0.2
+    )
+    return subparser
+
+
+def rcnn_args(subparser):
+    rcnn_parser = subparser.add_parser(
+        "rcnn", help="Run RCNN Model"
+    )
+    rcnn_parser.add_argument(
+        "-u", "--unitrnn", type=int, help="RNN unit size", default=100
+    )
+    rcnn_parser.add_argument(
+        "-t", "--typernn", type=str, help="Type of RNN layer",
+        choices={"lstm", "gru"}, default="lstm"
+    )
+    rcnn_parser.add_argument(
+        "--convfilter", type=int, help="Number of convolution filter",
+        default=128
     )
     return subparser

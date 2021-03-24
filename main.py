@@ -7,6 +7,7 @@ from common.util import remove_characters, remove_words
 from common.demo_args import get_args
 from demo import rnn_classify_demo, cnn_classify_demo
 from demo import transformer_classify_demo, han_classify_demo
+from demo import rcnn_classify_demo
 
 
 def main(args):
@@ -50,6 +51,8 @@ def main(args):
         transformer_classify_demo.main(args, data)
     elif args.architecture == "han":
         han_classify_demo.main(args, data)
+    elif args.architecture == "rcnn":
+        rcnn_classify_demo.main(args, data)
     else:
         raise ValueError("Invalid sub-command")
 
