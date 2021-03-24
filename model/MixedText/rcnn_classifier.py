@@ -7,6 +7,18 @@ from model.base_classifier import BaseClassifier
 
 class RCNNClassifier(BaseClassifier):
     def __init__(self, rnn_size, rnn_type, conv_filter, fcn_layer, **kwargs):
+        """
+        Class constructor
+        :param rnn_size: int, the size of rnn units
+        :param rnn_type: string, rnn cell type to be used "lstm"/"gru"
+        :param conv_filter: int, number of filter on convolution layer
+        :param fcn_layer: list of tuple, configuration of fcn layer,
+            after convolution, each tuple is after consist of:
+                [int] number of units,
+                [float] dropout after fcn layer,
+                [string] activation function,
+        """
+        self.__doc__ = self.__doc__ + super().__doc__
         super(RCNNClassifier, self).__init__(**kwargs)
         self.rnn_size = rnn_size
         self.rnn_type = rnn_type
@@ -44,7 +56,7 @@ class RCNNClassifier(BaseClassifier):
         right_context_rnn = Lambda(
             lambda right: K.reverse(right, axes=1)
         )(right_context_rnn)
-
+        # Convolution Part
         self.model = Concatenate(axis=-1)([
             left_context_rnn, center_embedding, right_context_rnn
         ])
@@ -52,6 +64,7 @@ class RCNNClassifier(BaseClassifier):
             self.conv_filter, 1, activation="tanh"
         )(self.model)
         self.model = GlobalMaxPooling1D()(self.model)
+        # FCN for classification
         for units, do_rate, activation in self.fcn_layers:
             self.model = Dense(units, activation=activation)(self.model)
             self.model = Dropout(do_rate)(self.model)
