@@ -20,8 +20,7 @@ def main(args, data):
     }
 
     if args.loadmodel:
-        transformer = TransformerClassifier()
-        transformer.load(args.loadmodel)
+        transformer = TransformerClassifier.load(args.loadmodel)
     else:
         transformer = TransformerClassifier(**arch_config)
         print("Training")

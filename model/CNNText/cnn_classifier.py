@@ -38,18 +38,8 @@ class CNNClassifier(BaseClassifier):
             sequence: cnn layer from conv_layers will stacked sequentially,
                 commonly used for character level CNN,
                 on word level CNN parallel is recommended
-        :param input_size: int, maximum number of token input
-        :param optimizer: string, learning optimizer (keras model "optimizer")
-        :param loss: string, loss function
-        :param embeding matrix: numpy array
-        :param vocab size: int, maximum size of vocabulary of the CNN
-            (most frequent word of the training data will be used)
-        :param vocab: dict, inverse index of vocabulary {"word":1}
-        :param embedding_file: string, path to pretrained emebdding file
-        :param embedding_type: string type of embedding file,
-            w2v for Word2Vec
-            ft for FasText
         """
+        self.__doc__ = BaseClassifier.__doc__
         self.model = None
         self.conv_layers = conv_layers
         self.conv_type = conv_type
@@ -110,26 +100,18 @@ class CNNClassifier(BaseClassifier):
             "i2l": self.idx2label,
             "vocab": self.vocab,
             "embedding_size": self.embedding_size,
-            "optimizer": self.optimizer,
-            "loss": self.loss,
             "conv_layers": self.conv_layers,
             "conv_type": self.conv_type,
             "fcn_layers": self.fcn_layers
         }
 
-    def load_class_param(self, class_param):
-        """
-        Load model from the saved zipfile
-        :param filepath: path to model zip file
-        """
-        self.max_input = class_param["input_size"]
-        self.label2idx = class_param["l2i"]
-        self.idx2label = class_param["i2l"]
-        self.vocab = class_param["vocab"]
-        self.embedding_size = class_param["embedding_size"]
-        self.optimizer = class_param["optimizer"]
-        self.loss = class_param["loss"]
-        self.conv_layers = class_param["conv_layers"]
-        self.conv_type = class_param["conv_type"]
-        self.fcn_layers = class_param["fcn_layers"]
-        self.n_label = len(self.label2idx)
+    @staticmethod
+    def get_construtor_param(param):
+        return {
+            "input_size": param["input_size"],
+            "vocab": param["vocab"],
+            "embedding_size": param["embedding_size"],
+            "conv_layers": param["conv_layers"],
+            "conv_type": param["conv_type"],
+            "fcn_layers": param["fcn_layers"]
+        }

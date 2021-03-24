@@ -23,7 +23,7 @@ class TransformerClassifier(BaseClassifier):
         :param dropout: float, dropout value
         :param n_heads: int, number of attention heads
         :param attention_dim: int, number of attention dimension
-            value will be overidden if using custom embedding matrix
+            this value will be overidden if using custom embedding matrix
         :param pos_embedding_init: bool, Initialize posiitonal embedding with
             sincos function, or else will be initialize with glorot)uniform
         :param fcn_layers: list of tupple, configuration of each
@@ -37,6 +37,7 @@ class TransformerClassifier(BaseClassifier):
                 attention embedding of [CLS] as sequence embedding (BERT style)
             global_avg, use GlobalAveragePool1D
         """
+        self.__doc__ = BaseClassifier.__doc__
         super(TransformerClassifier, self).__init__(**kwargs)
         self.n_blocks = n_blocks
         self.dim_ff = dim_ff
@@ -60,7 +61,7 @@ class TransformerClassifier(BaseClassifier):
             self.model = TransformerBlock(
                 self.dim_ff, self.dropout, self.n_heads, self.attention_dim
             )(self.model)
-        # IDEA: find a way to use [CLS] token (BERT style)
+
         if self.sequence_embedding == "cls":
             self.model = Lambda(lambda x: x[:, 0, :])(self.model)
         else:
@@ -104,8 +105,6 @@ class TransformerClassifier(BaseClassifier):
             "i2l": self.idx2label,
             "vocab": self.vocab,
             "embedding_size": self.embedding_size,
-            "optimizer": self.optimizer,
-            "loss": self.loss,
             "dropout": self.dropout,
             "n_blocks": self.n_blocks,
             "dim_ff": self.dim_ff,
@@ -116,19 +115,18 @@ class TransformerClassifier(BaseClassifier):
             "sequence_embedding": self.sequence_embedding
         }
 
-    def load_class_param(self, class_param):
-        self.max_input = class_param["input_size"]
-        self.label2idx = class_param["l2i"]
-        self.idx2label = class_param["i2l"]
-        self.vocab = class_param["vocab"]
-        self.embedding_size = class_param["embedding_size"]
-        self.optimizer = class_param["optimizer"]
-        self.loss = class_param["loss"]
-        self.dropout = class_param["dropout"]
-        self.n_blocks = class_param["n_blocks"]
-        self.dim_ff = class_param["dim_ff"]
-        self.n_heads = class_param["n_heads"]
-        self.attention_dim = class_param["attention_dim"]
-        self.fcn_layers = class_param["fcn_layers"]
-        self.pos_embedding_init = class_param["pos_embedding"]
-        self.sequence_embedding = class_param["sequence_embedding"]
+    @staticmethod
+    def get_construtor_param(param):
+        return {
+            "input_size": param["input_size"],
+            "vocab": param["vocab"],
+            "embedding_size": param["embedding_size"],
+            "n_blocks": param["n_blocks"],
+            "dim_ff": param["dim_ff"],
+            "dropout": param["dropout"],
+            "n_heads": param["n_heads"],
+            "attention_dim": param["attention_dim"],
+            "pos_embedding_init": param["pos_embedding"],
+            "fcn_layers": param["fcn_layers"],
+            "sequence_embedding": param["sequence_embedding"]
+        }

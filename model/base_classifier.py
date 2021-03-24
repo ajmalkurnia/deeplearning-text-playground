@@ -22,17 +22,22 @@ class BaseClassifier():
     def __init__(
         self, input_size=50, optimizer="adam", loss="categorical_crossentropy",
         embedding_matrix=None, vocab_size=0, vocab=None, embedding_file=None,
-        embedding_type="glorot_uniform", train_embedding=True
+        embedding_type="glorot_uniform", embedding_size=100,
+        train_embedding=True
     ):
         """
         Class constructor
         :param input_size: int, maximum number of token input
-        :param optimizer: string, learning optimizer (keras model "optimizer")
-        :param loss: string, loss function
+        :param optimizer: string, learning optimizer of the model
+            ("optimizer" parameter during compile)
+        :param loss: string, loss function of the model
+            ("loss" parameter during compile)
         :param embedding matrix: numpy array,
             Custom embedding matrix of the provided vocab
         :param vocab size: int, maximum size of vocabulary of the model
             (most frequent word of the training data will be used)
+        :param vocab: dictionary, the vocabulary index, a dictionary with
+            token as keys, and index as value
         :param embedding_file: string, path to embedding file
         :param embedding_type: string, embedding type
             w2v for word2vec, matrix will be taken from embedding file
@@ -40,6 +45,8 @@ class BaseClassifier():
             onehot, initialize one hot encoding of vocabulary
             custom, use embedding matrix
             or any valid keras.initializer string
+        :param emebdding_size: int, the size of embedding output
+            only useful when using non-pretrained/generated embedding
         :param train_embedding: boolean,
             trainable parameter on Embedding layer
             which apparently not recommended when using pretrained weight
@@ -57,6 +64,7 @@ class BaseClassifier():
         self.vocab = vocab
         self.train_embedding = train_embedding
         self.embedding_type = embedding_type
+        self.embedding_size = embedding_size
         if self.embedding:
             self.embedding_size = self.embedding.shape[1]
             self.vocab_size = len(vocab)
@@ -79,13 +87,9 @@ class BaseClassifier():
         Initialization one hot vector the vocabulary
         """
         self.embedding_size = len(self.vocab)
-        self.embedding = np.zeros(
-            (self.vocab_size, self.embedding_size), dtype=np.int32
+        self.embedding = np.eye(
+            self.vocab_size, dtype=np.int32
         )
-        # self.embedding.append(np.zeros(self.embedding_size))
-        for ch, idx in self.vocab.items():
-            self.embedding[idx][idx] = 1
-        # self.embedding = np.array(self.embedding)
 
     def __init_wv_embedding(self):
         """
@@ -291,8 +295,13 @@ class BaseClassifier():
                 for _, v in filenames.items():
                     zipf.write(f"{tmp_dir}/{v}")
 
-    def load(self, filepath):
+    def get_class_param(self):
+        raise NotImplementedError()
+
+    @classmethod
+    def load(cls, filepath):
         """
+        TODO: static load method
         Load model from the saved zipfile
         :param filepath: path to model zip file
         """
@@ -303,7 +312,7 @@ class BaseClassifier():
                 if filename.endswith(".hdf5"):
                     with TemporaryDirectory() as tmp_dir:
                         zipf.extract(filename, tmp_dir)
-                        self.model = load_model(
+                        model = load_model(
                             f"{tmp_dir}/{filename}",
                             custom_objects={
                                 "Attention": Attention,
@@ -312,15 +321,19 @@ class BaseClassifier():
                                 "MultiAttention": MultiAttention
                                 }
                         )
-                        self.model.summary()
+                        model.summary()
                 elif filename.endswith("_class.pkl"):
                     with zipf.open(filename, "r") as pkl:
                         pickle_content = pkl.read()
                         class_param = pickle.loads(pickle_content)
-                        self.load_class_param(class_param)
+            constructor_param = cls.get_construtor_param(class_param)
+            classifier = cls(**constructor_param)
+            classifier.model = model
+            classifier.label2idx = class_param["l2i"]
+            classifier.idx2label = class_param["i2l"]
+            classifier.n_label = len(classifier.label2idx)
+        return classifier
 
-    def load_class_param(self, class_param):
-        raise NotImplementedError()
-
-    def get_class_param(self):
+    @staticmethod
+    def get_construtor_param(param):
         raise NotImplementedError()
