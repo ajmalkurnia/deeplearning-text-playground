@@ -147,15 +147,15 @@ TASKS_OPENER = {
     "postag_gsd_id": Dataset.open_postag_ud,  # Postag on Indonesain UD dataset
     # https://github.com/khairunnisaor/idner-news-2k
     "ner_id": Dataset.open_ner_id,  # Named entity Recognition
-    # https: // ai.stanford.edu/~amaas/data/sentiment /
+    # https://ai.stanford.edu/~amaas/data/sentiment /
     "sentiment_en": Dataset.open_imdb,  # IMDB dataset
-    # https: // www.kaggle.com/amananandrai/ag-news-classification-dataset
+    # https://www.kaggle.com/amananandrai/ag-news-classification-dataset
     "news_category_en": Dataset.open_news_en,   # Ag News
-    # https: // sites.cs.ucsb.edu/~william/data/liar_dataset.zip
+    # https://sites.cs.ucsb.edu/~william/data/liar_dataset.zip
     "fake_news_en": Dataset.open_liar_en,  # Liar Dataset
-    # https: // github.com/UniversalDependencies/UD_English-EWT
+    # https://github.com/UniversalDependencies/UD_English-EWT
     "postag_en": Dataset.open_postag_ud,  # UD english
-    # https: // github.com/leondz/emerging_entities_17
+    # https://github.com/leondz/emerging_entities_17
     "ner_en": Dataset.open_ner_en,  # WNUT 2017
 }
 

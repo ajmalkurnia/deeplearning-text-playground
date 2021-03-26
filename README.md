@@ -12,7 +12,7 @@ Playing with some deep learning for various text proccesing task, mainly using k
 
 ## Task:
 1. Classification
-2. Sequence Tagging (**In-Progress**)
+2. Sequence Labelling (**In-Progress**)
 3. Sequence-to-Sequence
 4. Text Generation
 
@@ -27,6 +27,50 @@ Playing with some deep learning for various text proccesing task, mainly using k
 `python3 main.py --help` or `python3 main.py [cnn|rnn|transformer|han|rcnn] --help`
 
 There is jupyter notebook available for each task (so far only classification) that both provides detailed explanation of the usage
+
+## Data
+For each task, there are several dataset that used for evaluation in indonesian and english
+
+### Classification
+
+#### Emotion Dataset (id)
+This dataset is consist of 4403 tweet, each labeled with one of 5 emotion (angry, joy, sadness, fear, and love)
+Source : [Repo](https://github.com/meisaputri21/Indonesian-Twitter-Emotion-Dataset), [Paper](https://doi.org/10.1109/IALP.2018.8629262)
+
+#### News Category (id)
+This dataset is taken from IndoSum which is an Indonesian news summarization dataset. However, there is a category label which we could use as label for classification. each news is belong to one of 5 categories (tajuk utama / headline, hiburan / entertaiment, teknologi / technology, olah raga / sport, and showbiz). There are total of 18774 tokenized news dataset
+Source : [Repo](https://github.com/kata-ai/indosum), [Paper](10.1109/IALP.2018.8629109)
+
+#### IMDb (en)
+This is the IMDb review dataset, commonly used for sentiment analysis (binar classification of positive and negative). There are 25k review for testing and 25k for training.
+
+Source : [Website](https://ai.stanford.edu/~amaas/data/sentiment/) [Paper](https://www.aclweb.org/anthology/P11-1015/)
+
+```
+for this dataset only sent the directory path of the train/test to -d argument
+```
+
+#### LIAR (en)
+This dataset consist of fact-check verdict of a news statement politifact. There are 12519 statement, each is given one of six verdict true, mostly-true, half-true, barely-true, false, and pants-fire.
+
+Source : [Website](https://www.cs.ucsb.edu/~william/data/liar_dataset.zip) [Paper](https://www.aclweb.org/anthology/P17-2067.pdf)
+
+#### AG News Dataset (en)
+This dataset consists of 120000 news dataset for training and 7600 for testing. Each news is belong to one of 4 category "world", "sports", "business", and "science".
+
+Source : [Kaggle](https://www.kaggle.com/amananandrai/ag-news-classification-dataset) [Website](http://groups.di.unipi.it/~gulli/AG_corpus_of_news_articles.html) [Paper](http://www.ra.ethz.ch/cdstore/www2005/docs/p97.pdf)
+
+### Sequence Labelling
+
+#### POS-Tag 1 (id)
+
+#### POS-Tag 2 (id)
+
+#### NER (id)
+
+#### POS-Tag (en)
+
+#### POS-Tag (en)
 
 ## Dependencies
 - tensorflow==2.4.1
