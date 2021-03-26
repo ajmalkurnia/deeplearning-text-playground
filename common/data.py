@@ -11,7 +11,7 @@ TASKS = [
     "postag_id",  # Postag on commonly used dataset
     # https://github.com/UniversalDependencies/UD_Indonesian-GSD
     "postag_gsd_id",  # Postag on Indonesain UD dataset
-    # https://github.com/kxhairunnisaor/idner-news-2k
+    # https://github.com/khairunnisaor/idner-news-2k
     "ner_id",  # Named entity Recognition
 ]
 
@@ -35,7 +35,7 @@ def open_indosum(path):
         for line in jsonf:
             raw_data = json.loads(line)
             data.append({
-                "text": raw_data["paragraph"],
+                "text": raw_data["paragraphs"],
                 "label": raw_data["category"]
             })
     return pd.DataFrame(data)
@@ -50,13 +50,13 @@ def open_postag(path):
             tag_sequenece = []
             tokens = sentence.split("\n")
             for idx, token in enumerate(tokens):
-                if idx:
+                if len(token.split("\t")) == 2:
                     word, tag = token.split("\t")
                     token_sequence.append(word)
                     tag_sequenece.append(tag)
             data.append({
                 "tokenized_text": token_sequence,
-                "pos_tag": tag_sequenece
+                "tag": tag_sequenece
             })
     return data
 
@@ -69,17 +69,18 @@ def open_postag_ud(path):
         for line in f:
             if line[0] == "#":
                 continue
-            elif line != "":
-                words_detail = line.split("\t")
+            elif line.strip() != "":
+                words_detail = line.strip().split("\t")
                 token_sequence.append(words_detail[1])
                 tag_sequence.append(words_detail[3])
             else:
                 data.append({
                     "tokenized_text": token_sequence,
-                    "pos_tag": tag_sequence
+                    "tag": tag_sequence
                 })
                 token_sequence = []
                 tag_sequence = []
+    return data
 
 
 def open_ner_id(path):
@@ -88,14 +89,17 @@ def open_ner_id(path):
     tag_sequence = []
     with open(path, "r") as f:
         for line in f:
-            if line != "":
-                words_detail = line.split("\t")
+            if line.strip() != "":
+                words_detail = line.strip().split()
                 token_sequence.append(words_detail[0])
-                tag_sequence.append(words_detail[2])
+                tag_sequence.append(
+                    words_detail[2] if len(words_detail) == 3 else "O"
+                )
             else:
                 data.append({
                     "tokenized_text": token_sequence,
-                    "pos_tag": tag_sequence
+                    "tag": tag_sequence
                 })
                 token_sequence = []
                 tag_sequence = []
+    return data
