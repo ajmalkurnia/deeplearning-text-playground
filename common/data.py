@@ -141,12 +141,12 @@ class Dataset():
 
 class Preprocess():
     @staticmethod
-    def emotion_id(corpus, label):
+    def emotion_id(corpus):
         preprocessed = tokenization.tokenize(corpus)
         preprocessed = utils.cleaned_corpus(
             preprocessed, stopwords.words('indonesian')
         )
-        return utils.split_dataset((preprocessed, label))
+        return preprocessed
 
     @staticmethod
     def news_category_id(corpus):
@@ -231,9 +231,9 @@ TASKS = {
 }
 
 
-def data_opener(path, task):
+def open_data(path, task):
     return TASKS[task]["opener"](path)
 
 
-def data_proprocess(corpus, task):
+def proprocess_data(corpus, task):
     return TASKS[task]["preprocessor"](corpus)

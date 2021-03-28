@@ -1,48 +1,71 @@
-from sklearn.model_selection import train_test_split
-from nltk.corpus import stopwords
-import pandas as pd
+from glob import glob
 
-from common.tokenization import NLTKToknizerWrapper
-from common.util import remove_characters, remove_words
 from common.demo_args import get_args
+from common.data import open_data, preprocess_data
+from common.utils import split_data
 from demo import rnn_classify_demo, cnn_classify_demo
 from demo import transformer_classify_demo, han_classify_demo
 from demo import rcnn_classify_demo
 
 
+def get_data(args):
+    if args.task == "emotion_id":
+        df = open_data(args.datapath)
+        data = preprocess_data(df["text"].value.to_list(), args.task)
+        data = split_data(data, df["label"].value.to_list())
+    elif args.task == "news_category_id":
+        files = glob(f"{args.datapath}/*.01.jsonl")
+        data = [] * 3
+        for filen in files:
+            df = open_data(filen)
+            curr_data = preprocess_data(df["text"], args.task)
+            if "dev" in filen:
+                data[2] = (curr_data, df["label"].value.to_list())
+            elif "test" in filen:
+                data[1] = (curr_data, df["label"].value.to_list())
+            elif "train" in filen:
+                data[0] = (curr_data, df["label"].value.to_list())
+    elif args.task == "sentiment_en":
+        train_df = open_data(f"{args.datapath}/train/")
+        data = preprocess_data(train_df["text"].value.to_list(), args.task)
+        train_data, valid_data = split_data(
+            [data, train_df["label"].value.to_list()], 0.9, 0.1, 0.0
+        )
+        test_df = open_data(f"{args.datapath}/test/")
+        test_data = (
+            preprocess_data(test_df["text"].value.to_list(), args.task),
+            test_df["label"].value.to_list()
+        )
+        data = (train_data, test_data, valid_data)
+    elif args.task == "news_category_en":
+        train_df = open_data(f"{args.datapath}/train.csv")
+        data = preprocess_data(train_df["text"].value.to_list(), args.task)
+        train_data, valid_data = split_data(
+            [data, train_df["label"].value.to_list()], 0.9, 0.1, 0.0
+        )
+        test_df = open_data(f"{args.datapath}/test.csv")
+        test_data = (
+            preprocess_data(test_df["text"].value.to_list(), args.task),
+            test_df["label"].value.to_list()
+        )
+        data = (train_data, test_data, valid_data)
+    elif args.task == "fake_news_en":
+        data = []
+        for i in ["train", "test", "valid"]:
+            df = open_data(f"{args.datapath}/{i}.tsv")
+            data.append((
+                preprocess_data(df["text"].value.to_list(), args.task),
+                df["lael"].value.to_list()
+            ))
+    return data
+
+
 def main(args):
-    print("Open data")
-    df = pd.read_csv(args.datapath)
-
     # tokenize
-    print("Tokenize text")
-    tokenizer = NLTKToknizerWrapper(False)
-    df["token"] = df["text"].apply(lambda t: tokenizer.tokenize(t.lower()))
-    # optional preprocessing
-    print("Preprocessing")
-    id_stopwords = stopwords.words('indonesian')
-    cleaned_corpus = []
-    for tokens in df["token"]:
-        tmp = []
-        for token in tokens:
-            cleaned_token = remove_characters(token)
-            if cleaned_token.strip():
-                tmp.append(cleaned_token)
-        cleaned_corpus.append(remove_words(tmp, id_stopwords))
+    print("Open data")
+    data = get_data(args)
 
-    X = cleaned_corpus
-    y = df["label"].values.tolist()
-
-    # split
-    print("Split Data")
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, train_size=0.8, test_size=0.2, random_state=4371
-    )
-    X_train, X_val, y_train, y_val = train_test_split(
-        X_train, y_train, train_size=0.9, test_size=0.1, random_state=4371
-    )
-
-    data = X_train, y_train, X_test, y_test, X_val, y_val
+    # data = X_train, y_train, X_test, y_test, X_val, y_val
     if args.architecture == "rnn":
         rnn_classify_demo.main(args, data)
     elif args.architecture == "cnn":
