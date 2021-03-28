@@ -78,7 +78,7 @@ class Tokenizer():
         return counter
 
 
-class NLTKToknizerWrapper(Tokenizer):
+class NLTKTokenizerWrapper(Tokenizer):
     def __init__(self, formal=True, vocab_size=0, unk_token=True):
         """
         :param formal: bool, if True the tokenization process uses nltk's
@@ -100,7 +100,7 @@ class NLTKToknizerWrapper(Tokenizer):
         return tokens
 
 
-class CRFtokenizer:
+class CRFTokenizer:
     def __init__(self, window=5, vocab_size=0, unk_token=True, **kwargs):
         """
         :param window: the size of context window,
@@ -291,3 +291,21 @@ class CRFtokenizer:
                         class_param = pickle.load(pkl)
                         self.window = class_param["window"]
                         self.verbose_ortho = class_param["verbose_ortho"]
+
+
+def tokenize(corpus, method="nltk_casual", case_fold=True, crf_file=""):
+    if method == "nltk_casual":
+        tokenizer = NLTKTokenizerWrapper(False)
+    elif method == "nltk_formal":
+        tokenizer = NLTKTokenizerWrapper(True)
+    elif method == "crf":
+        tokenizer = CRFTokenizer()
+        tokenizer.load_model(crf_file)
+    elif method == "char":
+        return [[*doc] for doc in corpus]
+
+    return corpus.apply(
+        lambda t: tokenizer.tokenize(
+            t.lower() if case_fold else t
+            )
+        )

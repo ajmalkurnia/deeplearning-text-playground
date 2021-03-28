@@ -1,7 +1,10 @@
+from nltk.corpus import stopwords
 import pandas as pd
+
 import json
 from glob import glob
-
+from common import utils
+from common import tokenization
 DATA_DIR = "../resources/dataset/"
 
 
@@ -136,29 +139,101 @@ class Dataset():
         return data
 
 
-TASKS_OPENER = {
+class Preprocess():
+    @staticmethod
+    def emotion_id(corpus, label):
+        preprocessed = tokenization.tokenize(corpus)
+        preprocessed = utils.cleaned_corpus(
+            preprocessed, stopwords.words('indonesian')
+        )
+        return utils.split_dataset((preprocessed, label))
+
+    @staticmethod
+    def news_category_id(corpus):
+        # remove paragraph split
+        preprocessed = [s for p in corpus for s in p]
+        preprocessed = utils.cleaned_corpus(
+            preprocessed, stopwords.words('indonesian')
+        )
+        return preprocessed
+
+    @staticmethod
+    def generic_prepocess(corpus):
+        preprocessed = tokenization.tokenize(corpus)
+        preprocessed = utils.cleaned_corpus(preprocessed)
+        return preprocessed
+
+    def run(corpus):
+        return NotImplementedError
+
+
+TASKS = {
     # https://github.com/meisaputri21/Indonesian-Twitter-Emotion-Dataset
-    "emotion_id": pd.read_csv,  # Emotion dataset
+    # Emotion dataset
+    "emotion_id": {
+        "opener": pd.read_csv,
+        "preprocessor": Preprocess.emotion_id
+    },
     # https://github.com/kata-ai/indosum
-    "news_category_id": Dataset.open_indosum,  # News summarization w/ category
+    # News summarization w/ category
+    "news_category_id": {
+        "opener": Dataset.open_indosum,
+        "preprocessor": Preprocess.news_category_id
+    },
     # https://github.com/famrashel/idn-tagged-corpus
-    "postag_id": Dataset.open_postag_id,  # Postag on commonly used dataset
+    # Commonly used indonesian POStagging dataset
+    "postag_id": {
+        "opener": Dataset.open_postag_id,
+        "preprocessor": Preprocess.run
+    },
     # https://github.com/UniversalDependencies/UD_Indonesian-GSD
-    "postag_gsd_id": Dataset.open_postag_ud,  # Postag on Indonesain UD dataset
+    # Postag on Indonesain UD dataset
+    "postag_gsd_id": {
+        "opener": Dataset.open_postag_ud,
+        "preprocessor": Preprocess.run
+    },
     # https://github.com/khairunnisaor/idner-news-2k
-    "ner_id": Dataset.open_ner_id,  # Named entity Recognition
+    # Indonesian Named Entity Recognition dataset
+    "ner_id": {
+        "opener": Dataset.open_ner_id,
+        "preprocessor": Preprocess.run
+    },
     # https://ai.stanford.edu/~amaas/data/sentiment /
-    "sentiment_en": Dataset.open_imdb,  # IMDB dataset
+    # IMDB dataset
+    "sentiment_en": {
+        "opener": Dataset.open_imdb,
+        "preprocessor": Preprocess.generic_prepocess
+    },
     # https://www.kaggle.com/amananandrai/ag-news-classification-dataset
-    "news_category_en": Dataset.open_news_en,   # Ag News
+    # Ag News dataset
+    "news_category_en": {
+        "opener": Dataset.open_news_en,
+        "preprocessor": Preprocess.generic_prepocess
+    },
     # https://sites.cs.ucsb.edu/~william/data/liar_dataset.zip
-    "fake_news_en": Dataset.open_liar_en,  # Liar Dataset
+    # Liar Dataset
+    "fake_news_en": {
+        "opener": Dataset.open_liar_en,
+        "preprocessor": Preprocess.generic_prepocess
+    },
     # https://github.com/UniversalDependencies/UD_English-EWT
-    "postag_en": Dataset.open_postag_ud,  # UD english
+    # UD english
+    "postag_en": {
+        "opener": Dataset.open_postag_ud,
+        "preprocessor": Preprocess.run
+    },
     # https://github.com/leondz/emerging_entities_17
-    "ner_en": Dataset.open_ner_en,  # WNUT 2017
+    # WNUT 2017
+    "ner_en": {
+        "opener": Dataset.open_ner_en,
+        "preprocessor": Preprocess.run
+    },
 }
 
 
 def data_opener(path, task):
-    return TASKS_OPENER[task](path)
+    return TASKS[task]["opener"](path)
+
+
+def data_proprocess(corpus, task):
+    return TASKS[task]["preprocessor"](corpus)
