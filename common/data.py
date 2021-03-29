@@ -25,8 +25,11 @@ class Dataset():
         preprocessed = utils.clean_corpus(preprocessed)
         return preprocessed
 
-    def get_network_args(self):
-        raise NotImplementedError()
+    def get_sequence_length(self):
+        if self.arch == "han":
+            return (20, 10)
+        else:
+            return 25
 
 
 class EmotionID(Dataset):
@@ -61,6 +64,12 @@ class EmotionID(Dataset):
         data = split_data((data, df["label"]))
         return data
 
+    def get_sequence_length(self):
+        if self.arch == "han":
+            return (50, 10)
+        else:
+            return 50
+
 
 class IndoSum(Dataset):
     LANG = "id"
@@ -82,13 +91,18 @@ class IndoSum(Dataset):
 
     def flatten_corpus(self, corpus):
         flat_data = []
+        counter_sentence = 0
+        counter_token = 0
         for data in corpus.values.tolist():
             tmp = []
             for paragraph in data:
                 for sentence in paragraph:
+                    counter_sentence += 1
                     for token in sentence:
+                        counter_token += 1
                         tmp.append(token)
             flat_data.append(tmp)
+        print(counter_sentence, counter_token)
         return flat_data
 
     def preprocess_data(self, corpus):
@@ -126,6 +140,12 @@ class IndoSum(Dataset):
             elif "train" in filen:
                 data[0] = (curr_data, df["label"])
         return data
+
+    def get_sequence_length(self):
+        if self.arch == "han":
+            return (20, 20)
+        else:
+            return 250
 
 
 class POSTagID(Dataset):
@@ -242,8 +262,8 @@ class IMDB(Dataset):
         else:
             preprocessor = self.preprocess_data
         data = preprocessor(train_df["text"])
-        train_data, valid_data = split_data(
-            [data, train_df["label"]], 90, 10, 0
+        train_data, valid_data, _ = split_data(
+            (data, train_df["label"]), 90, 10, 0
         )
         test_df = self.open_data(f"{self.path}/test/")
         test_data = (
@@ -252,6 +272,12 @@ class IMDB(Dataset):
         )
         data = (train_data, test_data, valid_data)
         return data
+
+    def get_sequence_length(self):
+        if self.arch == "han":
+            return (20, 10)
+        else:
+            return 200
 
 
 class AGNews(Dataset):
@@ -263,12 +289,15 @@ class AGNews(Dataset):
 
     def open_data(self, path):
         df = pd.read_csv(path)
-        return df.rename({"Class Index": "label", "Title": "text"})
+        return df.rename(columns={
+            "Class Index": "label",
+            "Description": "text"
+            })
 
     def get_data(self):
         train_df = self.open_data(f"{self.path}/train.csv")
         data = self.preprocess_data(train_df["text"])
-        train_data, valid_data = split_data(
+        train_data, valid_data, _ = split_data(
             (data, train_df["label"]), 90, 10, 0
         )
         test_df = self.open_data(f"{self.path}/test.csv")
@@ -278,6 +307,12 @@ class AGNews(Dataset):
         )
         data = (train_data, test_data, valid_data)
         return data
+
+    def get_sequence_length(self):
+        if self.arch == "han":
+            return (20, 10)
+        else:
+            return 50
 
 
 class LIAR(Dataset):
@@ -303,6 +338,12 @@ class LIAR(Dataset):
                 df["label"]
             ))
         return data
+
+    def get_sequence_length(self):
+        if self.arch == "han":
+            return (20, 10)
+        else:
+            return 25
 
 
 class NEREN(Dataset):

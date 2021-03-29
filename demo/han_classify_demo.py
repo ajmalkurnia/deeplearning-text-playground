@@ -4,7 +4,7 @@ from model.RNNText.han_classifier import HANClassifier
 
 def main(args, data):
 
-    (X_train, y_train), (X_test, y_test), (X_val, y_val) = data
+    (X_train, y_train), (X_test, y_test), (X_val, y_val) = data.get_data()
     # Char level
     X_train = [[[*token] for token in doc] for doc in X_train]
     X_test = [[[*token] for token in doc] for doc in X_test]
@@ -19,7 +19,8 @@ def main(args, data):
         "optimizer": "adam",
         "rnn_size": args.unitrnn,
         "dropout": args.dropout,
-        "rnn_type": args.typernn
+        "rnn_type": args.typernn,
+        "input_shape": data.get_sequence_length()
     }
 
     if args.loadmodel:

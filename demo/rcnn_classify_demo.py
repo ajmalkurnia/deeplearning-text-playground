@@ -4,7 +4,7 @@ from model.MixedText.rcnn_classifier import RCNNClassifier
 
 def main(args, data):
 
-    (X_train, y_train), (X_test, y_test), (X_val, y_val) = data
+    (X_train, y_train), (X_test, y_test), (X_val, y_val) = data.get_data()
 
     # training, testing
     arch_config = {
@@ -14,7 +14,8 @@ def main(args, data):
         "optimizer": "adam",
         "rnn_size": args.unitrnn,
         "rnn_type": args.typernn,
-        "conv_filter": args.convfilter
+        "conv_filter": args.convfilter,
+        "input_size": data.get_sequence_length()
     }
 
     if args.loadmodel:

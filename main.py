@@ -20,9 +20,11 @@ def main(args):
         raise KeyError("Invalid Task")
 
     try:
-        DEMOS[args.architecture].main(args, data)
+        demo = DEMOS[args.architecture]
     except KeyError:
         raise KeyError("Invalid sub-command")
+
+    demo.main(args, data)
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ from model.TransformerText.transformer_classifier import TransformerClassifier
 
 def main(args, data):
 
-    (X_train, y_train), (X_test, y_test), (X_val, y_val) = data
+    (X_train, y_train), (X_test, y_test), (X_val, y_val) = data.get_data()
 
     # training, testing
     arch_config = {
@@ -17,7 +17,7 @@ def main(args, data):
         "n_heads": args.nheads,
         "dim_ff": args.dimff,
         "pos_embedding_init": args.positional,
-        "input_size": 250
+        "input_size": data.get_sequence_length()
     }
 
     if args.loadmodel:
