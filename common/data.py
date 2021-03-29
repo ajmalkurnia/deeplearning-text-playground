@@ -41,10 +41,19 @@ class EmotionID(Dataset):
 
     def preprocess_data(self, corpus):
         preprocessed = tokenization.tokenize(corpus)
-        preprocessed = utils.clean_corpus(
-            preprocessed, stopwords.words('indonesian')
-        )
+        preprocessed = utils.clean_corpus(preprocessed)
         return preprocessed
+
+    def preprocess_nested_data(self, corpus):
+        preprocessed = tokenization.tokenize(corpus, "nltk_sentence")
+        preprocessed_data = []
+        for data in preprocessed:
+            tokenized_corpus = tokenization.tokenize(data)
+            preprocessed = utils.clean_corpus(
+                tokenized_corpus
+            )
+            preprocessed_data.append(preprocessed)
+        return preprocessed_data
 
     def get_data(self):
         df = self.open_data(f"{self.path}/Twitter_Emotion_Dataset.csv")
@@ -89,12 +98,27 @@ class IndoSum(Dataset):
         )
         return preprocessed
 
+    def preprocess_nested_data(self, corpus):
+        preprocessed = []
+        for data in corpus.values.tolist():
+            tmp = []
+            for paragraph in data:
+                for sentence in paragraph:
+                    tmp.append(sentence)
+            preprocessed.append(
+                utils.clean_corpus(tmp, stopwords.words('indonesian'))
+            )
+        return preprocessed
+
     def get_data(self):
         files = glob(f"{self.path}/*.01.jsonl")
         data = [None] * 3
         for filen in files:
             df = self.open_data(filen)
-            curr_data = self.preprocess_data(df["text"], self.task)
+            if self.arch == "han":
+                curr_data = self.preprocess_nested_data(df["text"])
+            else:
+                curr_data = self.preprocess_data(df["text"])
             if "dev" in filen:
                 data[2] = (curr_data, df["label"])
             elif "test" in filen:
@@ -188,7 +212,7 @@ class NERID(Dataset):
 
 class IMDB(Dataset):
     LANG = "en"
-    TASK = "Sentence/Document classification"
+    TASK = "Document classification"
 
     def __init__(self, args):
         super(IMDB, self).__init__(args)
@@ -213,13 +237,17 @@ class IMDB(Dataset):
 
     def get_data(self):
         train_df = self.open_data(f"{self.path}/train/")
-        data = self.preprocess_data(train_df["text"])
+        if self.arch == "han":
+            preprocessor = self.preprocess_nested_data
+        else:
+            preprocessor = self.preprocess_data
+        data = preprocessor(train_df["text"])
         train_data, valid_data = split_data(
             [data, train_df["label"]], 90, 10, 0
         )
         test_df = self.open_data(f"{self.path}/test/")
         test_data = (
-            self.preprocess_data(test_df["text"]),
+            preprocessor(test_df["text"]),
             test_df["label"]
         )
         data = (train_data, test_data, valid_data)
@@ -228,7 +256,7 @@ class IMDB(Dataset):
 
 class AGNews(Dataset):
     LANG = "en"
-    TASK = "Document Classification"
+    TASK = "Short document/sentence Classification"
 
     def __init__(self, args):
         super(AGNews, self).__init__(args)
@@ -254,7 +282,7 @@ class AGNews(Dataset):
 
 class LIAR(Dataset):
     LANG = "en"
-    TASK = "Document Classification"
+    TASK = "Sentence Classification"
 
     def __init__(self, args):
         super(LIAR, self).__init__(args)
