@@ -17,7 +17,8 @@ def get_args():
 
 def base_args(parser):
     parser.add_argument(
-        "-d", "--datapath", type=str, help="Path to input data", required=True
+        "-d", "--datapath", type=str, help="Path to data directory",
+        required=True
     )
     parser.add_argument(
         "-t", "--task", type=str, help="Tasks", required=True,
