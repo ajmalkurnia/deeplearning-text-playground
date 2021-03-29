@@ -4,7 +4,7 @@ from model.MixedText.rcnn_classifier import RCNNClassifier
 
 def main(args, data):
 
-    X_train, y_train, X_test, y_test, X_val, y_val = data
+    (X_train, y_train), (X_test, y_test), (X_val, y_val) = data
 
     # training, testing
     arch_config = {

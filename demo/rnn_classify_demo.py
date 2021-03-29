@@ -4,7 +4,7 @@ from model.RNNText.rnn_classifier import RNNClassifier
 
 def main(args, data):
 
-    X_train, y_train, X_test, y_test, X_val, y_val = data
+    (X_train, y_train), (X_test, y_test), (X_val, y_val) = data
 
     # training, testing
     arch_config = {
@@ -15,7 +15,8 @@ def main(args, data):
         "rnn_size": args.unitrnn,
         "dropout": args.dropout,
         "rnn_type": args.typernn,
-        "attention": args.attention
+        "attention": args.attention,
+        "input_size": 250
     }
 
     if args.loadmodel:

@@ -166,7 +166,9 @@ class BaseClassifier():
         :param label_data: list of string, target label of the dataset
         :return list of int: indexes of the label
         """
-        return to_categorical([self.label2idx[label] for label in label_data])
+        return to_categorical(
+            [self.label2idx[label] for label in label_data], self.n_label
+        )
 
     def get_label(self, pred_data):
         """
@@ -187,7 +189,7 @@ class BaseClassifier():
         X_feature = self.vectorized_input(X)
         X_feature = np.array(X_feature, dtype="float32", copy=False)
         y_vector = None
-        if y:
+        if y is not None:
             y_vector = self.vectorized_label(y)
         return X_feature, y_vector
 

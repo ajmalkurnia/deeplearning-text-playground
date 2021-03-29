@@ -4,14 +4,15 @@ from model.CNNText.cnn_classifier import CNNClassifier
 
 def main(args, data):
 
-    X_train, y_train, X_test, y_test, X_val, y_val = data
+    (X_train, y_train), (X_test, y_test), (X_val, y_val) = data
     # training, testing
     arch_config = {
         "vocab_size": args.vocabsize,
         "conv_type": args.convtype,
         "embedding_type": args.embeddingtype,
         "embedding_file": args.embeddingfile,
-        "optimizer": "adagrad"
+        "optimizer": "adagrad",
+        "input_size": 250
     }
     if args.convtype == "parallel":
         arch_config["conv_layers"] = [

@@ -17,15 +17,16 @@ def remove_words(tokenized_text, wordset=stopwords.words('english')):
     return list(filter(lambda x: x not in wordset, tokenized_text))
 
 
-def clean_text(tokenized_corpus, stopwrods=stopwords.words('english')):
+def clean_corpus(tokenized_corpus, stop_word=stopwords.words('english')):
     cleaned_corpus = []
     for tokens in tokenized_corpus:
         tmp = []
         for token in tokens:
             cleaned_token = remove_characters(token)
-            if cleaned_token.strip():
+            token = cleaned_token.strip()
+            if token is not None and token not in stop_word:
                 tmp.append(cleaned_token)
-        cleaned_corpus.append(remove_words(tmp, stopwords))
+        cleaned_corpus.append(tmp)
     return cleaned_corpus
 
 
@@ -37,14 +38,14 @@ def casefolding(tokenized_text, to="lower"):
 
 
 def split_data(
-    dataset, train_split=0.72, test_split=0.2, valid_split=0.08, seed=148301
+    dataset, train_split=72, test_split=20, valid_split=8, seed=148301
         ):
 
-    assert train_split + test_split + valid_split == 1
+    assert train_split + test_split + valid_split == 100
     X, y = dataset
     init_train_split = train_split+valid_split
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, train_size=init_train_split, test_size=test_split,
+        X, y, train_size=init_train_split/100, test_size=test_split/100,
         random_state=seed
     )
     X_val = []
@@ -54,8 +55,8 @@ def split_data(
 
     if valid_split > 0:
         X_train, X_val, y_train, y_val = train_test_split(
-            X_train, y_train, train_size=train_split, test_size=valid_split,
-            random_state=seed
+            X_train, y_train, train_size=train_split,
+            test_size=valid_split, random_state=seed
         )
 
     return (X_train, y_train), (X_test, y_test), (X_val, y_val)

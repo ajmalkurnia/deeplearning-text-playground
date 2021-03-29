@@ -5,12 +5,62 @@ import json
 from glob import glob
 from common import utils
 from common import tokenization
-DATA_DIR = "../resources/dataset/"
+from common.utils import split_data
 
 
 class Dataset():
-    @staticmethod
-    def open_indosum(path):
+    def __init__(self, args):
+        self.tasks = args.task
+        self.path = args.datapath
+        self.arch = args.architecture
+
+    def get_data(self):
+        raise NotImplementedError()
+
+    def open_data(self, path):
+        raise NotImplementedError()
+
+    def preprocess_data(self, corpus):
+        preprocessed = tokenization.tokenize(corpus)
+        preprocessed = utils.clean_corpus(preprocessed)
+        return preprocessed
+
+    def get_network_args(self):
+        raise NotImplementedError()
+
+
+class EmotionID(Dataset):
+    LANG = "id"
+    TASK = "sentence classification"
+
+    def __init__(self, args):
+        super(EmotionID, self).__init__(args)
+
+    def open_data(self, path):
+        return pd.read_csv(path)
+
+    def preprocess_data(self, corpus):
+        preprocessed = tokenization.tokenize(corpus)
+        preprocessed = utils.clean_corpus(
+            preprocessed, stopwords.words('indonesian')
+        )
+        return preprocessed
+
+    def get_data(self):
+        df = self.open_data(f"{self.path}/Twitter_Emotion_Dataset.csv")
+        data = self.preprocess_data(df["text"])
+        data = split_data((data, df["label"]))
+        return data
+
+
+class IndoSum(Dataset):
+    LANG = "id"
+    TASK = "document_classification"
+
+    def __init__(self, args):
+        super(IndoSum, self).__init__(args)
+
+    def open_data(self, path):
         data = []
         with open(path, "r") as jsonf:
             for line in jsonf:
@@ -21,10 +71,46 @@ class Dataset():
                 })
         return pd.DataFrame(data)
 
-    @staticmethod
-    def open_postag_id(path):
+    def flatten_corpus(self, corpus):
+        flat_data = []
+        for data in corpus.values.tolist():
+            tmp = []
+            for paragraph in data:
+                for sentence in paragraph:
+                    for token in sentence:
+                        tmp.append(token)
+            flat_data.append(tmp)
+        return flat_data
+
+    def preprocess_data(self, corpus):
+        preprocessed = self.flatten_corpus(corpus)
+        preprocessed = utils.clean_corpus(
+            preprocessed, stopwords.words('indonesian')
+        )
+        return preprocessed
+
+    def get_data(self):
+        files = glob(f"{self.path}/*.01.jsonl")
+        data = [None] * 3
+        for filen in files:
+            df = self.open_data(filen)
+            curr_data = self.preprocess_data(df["text"], self.task)
+            if "dev" in filen:
+                data[2] = (curr_data, df["label"])
+            elif "test" in filen:
+                data[1] = (curr_data, df["label"])
+            elif "train" in filen:
+                data[0] = (curr_data, df["label"])
+        return data
+
+
+class POSTagID(Dataset):
+    LANG = "id"
+    TASK = "sequence labelling"
+
+    def open_data(self):
         data = []
-        with open(path, "r") as f:
+        with open(self.path, "r") as f:
             sentences = f.read().split("\n</kalimat>")
             for sentence in sentences:
                 token_sequence = []
@@ -41,12 +127,19 @@ class Dataset():
                 })
         return data
 
-    @staticmethod
-    def open_postag_ud(path):
+
+class POSTagUDID(Dataset):
+    LANG = "id"
+    TASK = "Sequence labelling"
+
+    def __init__(self, args):
+        super(POSTagUDID, self).__init__(args)
+
+    def open_data(self):
         data = []
         token_sequence = []
         tag_sequence = []
-        with open(path, "r") as f:
+        with open(self.path, "r") as f:
             for line in f:
                 if line[0] == "#":
                     continue
@@ -63,12 +156,19 @@ class Dataset():
                     tag_sequence = []
         return data
 
-    @staticmethod
-    def open_ner_id(path):
+
+class NERID(Dataset):
+    LANG = "id"
+    TASK = "Sequence labelling"
+
+    def __init__(self, args):
+        super(NERID, self).__init__(args)
+
+    def open_data(self):
         data = []
         token_sequence = []
         tag_sequence = []
-        with open(path, "r") as f:
+        with open(self.path, "r") as f:
             for line in f:
                 if line.strip() != "":
                     words_detail = line.strip().split()
@@ -85,10 +185,17 @@ class Dataset():
                     tag_sequence = []
         return data
 
-    @staticmethod
-    def open_imdb(directory):
-        negative_list = glob(f"{directory}/neg/*.txt")
-        positive_list = glob(f"{directory}/pos/*.txt")
+
+class IMDB(Dataset):
+    LANG = "en"
+    TASK = "Sentence/Document classification"
+
+    def __init__(self, args):
+        super(IMDB, self).__init__(args)
+
+    def open_data(self, path):
+        negative_list = glob(f"{path}/neg/*.txt")
+        positive_list = glob(f"{path}/pos/*.txt")
         data = []
         for fname in negative_list:
             with open(fname, "r") as f:
@@ -104,21 +211,80 @@ class Dataset():
                 })
         return pd.DataFrame(data)
 
-    @staticmethod
-    def open_news_en(path):
+    def get_data(self):
+        train_df = self.open_data(f"{self.path}/train/")
+        data = self.preprocess_data(train_df["text"])
+        train_data, valid_data = split_data(
+            [data, train_df["label"]], 90, 10, 0
+        )
+        test_df = self.open_data(f"{self.path}/test/")
+        test_data = (
+            self.preprocess_data(test_df["text"]),
+            test_df["label"]
+        )
+        data = (train_data, test_data, valid_data)
+        return data
+
+
+class AGNews(Dataset):
+    LANG = "en"
+    TASK = "Document Classification"
+
+    def __init__(self, args):
+        super(AGNews, self).__init__(args)
+
+    def open_data(self, path):
         df = pd.read_csv(path)
         return df.rename({"Class Index": "label", "Title": "text"})
 
-    @staticmethod
-    def open_liar_en(path):
+    def get_data(self):
+        train_df = self.open_data(f"{self.path}/train.csv")
+        data = self.preprocess_data(train_df["text"])
+        train_data, valid_data = split_data(
+            (data, train_df["label"]), 90, 10, 0
+        )
+        test_df = self.open_data(f"{self.path}/test.csv")
+        test_data = (
+            self.preprocess_data(test_df["text"]),
+            test_df["label"]
+        )
+        data = (train_data, test_data, valid_data)
+        return data
+
+
+class LIAR(Dataset):
+    LANG = "en"
+    TASK = "Document Classification"
+
+    def __init__(self, args):
+        super(LIAR, self).__init__(args)
+
+    def open_data(self, path):
         df = pd.read_csv(
             path, delimiter="\t", usecols=[1, 2], header=None,
             names=["label", "text"]
         )
         return df
 
-    @staticmethod
-    def open_ner_en(path):
+    def get_data(self):
+        data = []
+        for i in ["train", "test", "valid"]:
+            df = self.open_data(f"{self.path}/{i}.tsv")
+            data.append((
+                self.preprocess_data(df["text"]),
+                df["label"]
+            ))
+        return data
+
+
+class NEREN(Dataset):
+    LANG = "en"
+    TASK = "Sequence Labelling"
+
+    def __init__(self, args):
+        super(NEREN, self).__init__(args)
+
+    def open_data(self, path):
         data = []
         with open(path, "r") as f:
             token_sequence = []
@@ -139,101 +305,35 @@ class Dataset():
         return data
 
 
-class Preprocess():
-    @staticmethod
-    def emotion_id(corpus):
-        preprocessed = tokenization.tokenize(corpus)
-        preprocessed = utils.cleaned_corpus(
-            preprocessed, stopwords.words('indonesian')
-        )
-        return preprocessed
-
-    @staticmethod
-    def news_category_id(corpus):
-        # remove paragraph split
-        preprocessed = [s for p in corpus for s in p]
-        preprocessed = utils.cleaned_corpus(
-            preprocessed, stopwords.words('indonesian')
-        )
-        return preprocessed
-
-    @staticmethod
-    def generic_prepocess(corpus):
-        preprocessed = tokenization.tokenize(corpus)
-        preprocessed = utils.cleaned_corpus(preprocessed)
-        return preprocessed
-
-    def run(corpus):
-        return NotImplementedError
-
-
-TASKS = {
+DATASET = {
     # https://github.com/meisaputri21/Indonesian-Twitter-Emotion-Dataset
     # Emotion dataset
-    "emotion_id": {
-        "opener": pd.read_csv,
-        "preprocessor": Preprocess.emotion_id
-    },
+    "emotion_id": EmotionID,
     # https://github.com/kata-ai/indosum
     # News summarization w/ category
-    "news_category_id": {
-        "opener": Dataset.open_indosum,
-        "preprocessor": Preprocess.news_category_id
-    },
+    "news_category_id": IndoSum,
     # https://github.com/famrashel/idn-tagged-corpus
     # Commonly used indonesian POStagging dataset
-    "postag_id": {
-        "opener": Dataset.open_postag_id,
-        "preprocessor": Preprocess.run
-    },
+    "postag_id": POSTagID,
     # https://github.com/UniversalDependencies/UD_Indonesian-GSD
     # Postag on Indonesain UD dataset
-    "postag_gsd_id": {
-        "opener": Dataset.open_postag_ud,
-        "preprocessor": Preprocess.run
-    },
+    "postag_gsd_id": POSTagUDID,
     # https://github.com/khairunnisaor/idner-news-2k
     # Indonesian Named Entity Recognition dataset
-    "ner_id": {
-        "opener": Dataset.open_ner_id,
-        "preprocessor": Preprocess.run
-    },
+    "ner_id": NERID,
     # https://ai.stanford.edu/~amaas/data/sentiment /
     # IMDB dataset
-    "sentiment_en": {
-        "opener": Dataset.open_imdb,
-        "preprocessor": Preprocess.generic_prepocess
-    },
+    "sentiment_en": IMDB,
     # https://www.kaggle.com/amananandrai/ag-news-classification-dataset
     # Ag News dataset
-    "news_category_en": {
-        "opener": Dataset.open_news_en,
-        "preprocessor": Preprocess.generic_prepocess
-    },
+    "news_category_en": AGNews,
     # https://sites.cs.ucsb.edu/~william/data/liar_dataset.zip
     # Liar Dataset
-    "fake_news_en": {
-        "opener": Dataset.open_liar_en,
-        "preprocessor": Preprocess.generic_prepocess
-    },
+    "fake_news_en": LIAR,
     # https://github.com/UniversalDependencies/UD_English-EWT
     # UD english
-    "postag_en": {
-        "opener": Dataset.open_postag_ud,
-        "preprocessor": Preprocess.run
-    },
+    "postag_en": POSTagUDID,
     # https://github.com/leondz/emerging_entities_17
     # WNUT 2017
-    "ner_en": {
-        "opener": Dataset.open_ner_en,
-        "preprocessor": Preprocess.run
-    },
+    "ner_en": NEREN
 }
-
-
-def open_data(path, task):
-    return TASKS[task]["opener"](path)
-
-
-def proprocess_data(corpus, task):
-    return TASKS[task]["preprocessor"](corpus)
