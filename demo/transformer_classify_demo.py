@@ -1,12 +1,15 @@
+import logging
 from sklearn.metrics import classification_report
 from model.TransformerText.transformer_classifier import TransformerClassifier
 
 
 def main(args, data):
-
+    logger = logging.getLogger(__name__)
+    logger.info("Prepare dataset")
     (X_train, y_train), (X_test, y_test), (X_val, y_val) = data.get_data()
 
     # training, testing
+    logger.info("Preparing transformer parameter")
     arch_config = {
         "vocab_size": args.vocabsize,
         "embedding_type": args.embeddingtype or "glorot_uniform",
@@ -21,18 +24,21 @@ def main(args, data):
     }
 
     if args.loadmodel:
+        logger.info("Load model")
         transformer = TransformerClassifier.load(args.loadmodel)
     else:
+        logger.info("Init model")
         transformer = TransformerClassifier(**arch_config)
-        print("Training")
+        logger.info("Training")
         transformer.train(
             X_train, y_train, args.epoch, args.batchsize,
             (X_val, y_val), args.checkpoint
         )
-    print("Testing")
+    logger.info("Testing")
     y_pred = transformer.test(X_test)
     # evaluation report
-    print(classification_report(y_test, y_pred))
+    logger.info("Evaluation")
+    logger.info(classification_report(y_test, y_pred))
     if args.savemodel:
-        print("Saving file")
+        logger.info("Saving file")
         transformer.save(args.savemodel)

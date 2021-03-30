@@ -9,6 +9,7 @@ from tempfile import TemporaryDirectory
 import numpy as np
 import pickle
 import itertools
+import logging
 
 from common.tokenization import Tokenizer
 from common.word_vector import WordEmbedding
@@ -79,6 +80,7 @@ class BaseClassifier():
                 raise ValueError(
                     "Provide the embedding_type of the embedding file [w2v|ft]"
                 )
+            self.logger = logging.getLogger(__name__)
 
     def init_model(self):
         raise NotImplementedError()
@@ -257,13 +259,18 @@ class BaseClassifier():
         :param validation_pair: tupple (val_X, and val_y), validation split
         :param ckpoint_file: string, path to checkpoint
         """
+        self.logger.info("Initialized Vocabulary")
         if self.vocab is None:
             self.__init_w2i(X)
+        self.logger.info("Initialized embeddings")
         self.__init_embedding()
+        self.logger.info("Initialized Label vectors")
         if self.label2idx is None:
             self.__init_l2i(y)
+        self.logger.info("Initialized model")
         if self.model is None:
             self.init_model()
+        self.logger.info("Run training process")
         self.__train(X, y, epoch, batch_size, validation_pair, ckpoint_file)
 
     def test(self, X):
@@ -274,6 +281,7 @@ class BaseClassifier():
         """
         result = []
         X_test, _ = self.__prepare_data(X)
+        self.logging.info("Predicting...")
         y_pred = self.model.predict(X_test)
         result = self.get_label(y_pred)
         return result
@@ -304,7 +312,6 @@ class BaseClassifier():
     @classmethod
     def load(cls, filepath):
         """
-        TODO: static load method
         Load model from the saved zipfile
         :param filepath: path to model zip file
         """

@@ -1,11 +1,13 @@
+import logging
 from sklearn.metrics import classification_report
 from model.CNNText.cnn_classifier import CNNClassifier
 
 
 def main(args, data):
-
+    logger = logging.getLogger(__name__)
+    logger.info("Prepraring data")
     (X_train, y_train), (X_test, y_test), (X_val, y_val) = data.get_data()
-    # training, testing
+    logger.info("Prepraring CNN parameter")
     arch_config = {
         "vocab_size": args.vocabsize,
         "conv_type": args.convtype,
@@ -34,18 +36,21 @@ def main(args, data):
             (1024, 0.5, "relu")
         ]
     if args.loadmodel:
+        logger.info("Load model")
         cnn = CNNClassifier.load(args.loadmodel)
     else:
+        logger.info("Init model")
         cnn = CNNClassifier(**arch_config)
-        print("Training")
+        logger.info("Training")
         cnn.train(
             X_train, y_train, args.epoch, args.batchsize,
             (X_val, y_val), args.checkpoint
         )
-    print("Testing")
+    logger.info("Testing")
     y_pred = cnn.test(X_test)
     # evaluation report
-    print(classification_report(y_test, y_pred))
+    logger.info("Evaluation")
+    logger.info(classification_report(y_test, y_pred))
     if args.savemodel:
-        print("Saving file")
+        logger.info("Saving file")
         cnn.save(args.savemodel)

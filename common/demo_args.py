@@ -33,6 +33,9 @@ def base_args(parser):
     parser.add_argument(
         "-l", "--loadmodel", type=str, help="Path to load model"
     )
+    parser.add_argument(
+        "--logfile", type=str, help="Log file"
+    )
     return parser
 
 
