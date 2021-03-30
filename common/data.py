@@ -102,7 +102,6 @@ class IndoSum(Dataset):
                         counter_token += 1
                         tmp.append(token)
             flat_data.append(tmp)
-        print(counter_sentence, counter_token)
         return flat_data
 
     def preprocess_data(self, corpus):
