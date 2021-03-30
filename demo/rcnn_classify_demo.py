@@ -35,7 +35,7 @@ def main(args, data):
     logger.info("Testing")
     y_pred = rcnn.test(X_test)
     # evaluation report
-    logger.info(classification_report(y_test, y_pred))
+    logger.info(classification_report(y_test, y_pred, digits=5))
     if args.savemodel:
         logger.info("Saving file")
         rcnn.save(args.savemodel)

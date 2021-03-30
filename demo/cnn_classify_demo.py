@@ -13,22 +13,23 @@ def main(args, data):
         "conv_type": args.convtype,
         "embedding_type": args.embeddingtype,
         "embedding_file": args.embeddingfile,
-        "optimizer": "adagrad",
         "input_size": data.get_sequence_length()
     }
     if args.convtype == "parallel":
         arch_config["conv_layers"] = [
+            (256, 2, 1, "relu"),
             (256, 3, 1, "relu"),
             (256, 4, 1, "relu"),
-            (256, 5, 1, "relu")
+            (256, 5, 1, "relu"),
+            (256, 6, 1, "relu")
         ]
     else:
         arch_config["conv_layers"] = [
-            (256, 7, 3, "relu"),
+            (256, 5, 3, "relu"),
             # (256, 7, -1, "relu"),
             # (256, 3, -1, "relu"),
             # (256, 3, -1, "relu"),
-            # (256, 3, -1, "relu"),
+            (256, 3, -1, "relu"),
             (256, 3, 3, "relu")
         ]
         arch_config["fcn_layers"] = [
@@ -50,7 +51,7 @@ def main(args, data):
     y_pred = cnn.test(X_test)
     # evaluation report
     logger.info("Evaluation")
-    logger.info(classification_report(y_test, y_pred))
+    logger.info(classification_report(y_test, y_pred, digits=5))
     if args.savemodel:
         logger.info("Saving file")
         cnn.save(args.savemodel)

@@ -60,7 +60,7 @@ class CNNClassifier(BaseClassifier):
         )
         x = embedding_layer(inputs)
         # 1 is stacked the usual way (like image CNN),
-        if self.conv_type == "sequence":
+        if self.conv_type == "sequential":
             for n_filter, filter_s, pool_size, activation in self.conv_layers:
                 x = Conv1D(n_filter, filter_s)(x)
                 x = Activation(activation)(x)

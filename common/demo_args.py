@@ -90,7 +90,7 @@ def rnn_args(subparser):
 def cnn_args(subparser):
     cnn_parser = subparser.add_parser("cnn", help="Run CNN model")
     cnn_parser.add_argument(
-        "--convtype", type=str, choices={"parallel", "sequence"},
+        "--convtype", type=str, choices={"parallel", "sequential"},
         help="Convolution process type", default="sequence"
     )
     return subparser

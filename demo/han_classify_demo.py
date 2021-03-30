@@ -9,10 +9,10 @@ def main(args, data):
     (X_train, y_train), (X_test, y_test), (X_val, y_val) = data.get_data()
     # Char level
     logger.info("Converting 2D data to 3D")
-
-    X_train = [[[*token] for token in doc] for doc in X_train]
-    X_test = [[[*token] for token in doc] for doc in X_test]
-    X_val = [[[*token] for token in doc] for doc in X_val]
+    if args.task in ["sentiment_id", "news_category_en", "fake_news_en"]:
+        X_train = [[[*token] for token in doc] for doc in X_train]
+        X_test = [[[*token] for token in doc] for doc in X_test]
+        X_val = [[[*token] for token in doc] for doc in X_val]
     # Sentence level
 
     # training, testing
@@ -43,7 +43,7 @@ def main(args, data):
     y_pred = han.test(X_test)
     # evaluation report
     logger.info("Evaluation")
-    logger.info(classification_report(y_test, y_pred))
+    logger.info(classification_report(y_test, y_pred, digits=5))
     if args.savemodel:
         logger.info("Saving file")
         han.save(args.savemodel)

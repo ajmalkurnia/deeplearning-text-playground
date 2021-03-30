@@ -80,7 +80,7 @@ class BaseClassifier():
                 raise ValueError(
                     "Provide the embedding_type of the embedding file [w2v|ft]"
                 )
-            self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(__name__)
 
     def init_model(self):
         raise NotImplementedError()
@@ -214,7 +214,7 @@ class BaseClassifier():
             )
             es = EarlyStopping(
                 monitor='val_accuracy', mode='max', verbose=1,
-                patience=int(epoch/2), restore_best_weights=True
+                patience=int(epoch/5), restore_best_weights=True
             )
             callbacks_list = [es]
             if ckpoint_file:
@@ -281,7 +281,7 @@ class BaseClassifier():
         """
         result = []
         X_test, _ = self.__prepare_data(X)
-        self.logging.info("Predicting...")
+        self.logger.info("Predicting...")
         y_pred = self.model.predict(X_test)
         result = self.get_label(y_pred)
         return result

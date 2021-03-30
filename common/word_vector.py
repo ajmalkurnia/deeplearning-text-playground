@@ -2,7 +2,7 @@ import os
 # from glob import glob
 # from zipfile import ZipFile, BadZipFile
 
-from gensim.models import Word2Vec, FastText
+from gensim.models import Word2Vec, FastText, fasttext
 from gensim.test.utils import datapath, get_tmpfile
 from gensim.models import KeyedVectors
 from gensim.scripts.glove2word2vec import glove2word2vec
@@ -108,7 +108,7 @@ class WordEmbedding():
             self.model = KeyedVectors.load_word2vec_format(path)
         elif self.embedding_type == "ft":
             try:
-                self.model = FastText.load_fasttext_format(path)
+                self.model = fasttext.load_facebook_model(path)
             except NotImplementedError:
                 self.model = KeyedVectors.load_word2vec_format(path)
                 self.key_vector_only = True

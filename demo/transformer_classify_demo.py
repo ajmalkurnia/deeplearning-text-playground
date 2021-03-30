@@ -38,7 +38,7 @@ def main(args, data):
     y_pred = transformer.test(X_test)
     # evaluation report
     logger.info("Evaluation")
-    logger.info(classification_report(y_test, y_pred))
+    logger.info(classification_report(y_test, y_pred, digits=5))
     if args.savemodel:
         logger.info("Saving file")
         transformer.save(args.savemodel)
