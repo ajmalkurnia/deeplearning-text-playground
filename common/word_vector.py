@@ -18,7 +18,7 @@ class WordEmbedding():
     def find_similar_word(self, word, n=10):
         raise NotImplementedError()
 
-    def get_word_vector(self, word, unk="random"):
+    def retrieve_vector(self, word, unk="random"):
         """
         Basic implementation to retrieve word vector
         :param word: str, query word
@@ -88,7 +88,9 @@ class FastTextWrapper(WordEmbedding):
 
     def find_similar_word(self, word, n=10):
         try:
-            return self.model.get_nearest_neighbor(n)
+            return [
+                (w, sim) for sim, w in self.model.get_nearest_neighbor(n)
+            ]
         except KeyError:
             return []
 
@@ -104,10 +106,11 @@ class FastTextWrapper(WordEmbedding):
         we = FastTextWrapper()
         we.model = model
         we.size = model.get_dimension()
-        sum_vector = np.zeros(we.size)
-        for word in model.words:
-            sum_vector += word
-        we.mean_vector = sum_vector/len(model.words)
+        sum_vector = np.zeros(we.size, dtype=np.float64)
+        vocab = model.get_words(on_unicode_error='replace')
+        for word in vocab:
+            sum_vector += model[word]
+        we.mean_vector = sum_vector/len(vocab)
         return we
 
 
@@ -134,7 +137,7 @@ class GloVeWrapper(WordEmbedding):
         except KeyError:
             return []
 
-    def get_word_vector(self, word, unk="random"):
+    def retrieve_vector(self, word, unk="random"):
         """
         Implementation to retrieve word vector
         :param word: str, query word
@@ -174,11 +177,10 @@ class GloVeWrapper(WordEmbedding):
                     continue
                 vocab.append(data[0])
                 model.append([float(i) for i in data[1:]])
-        model = np.array(model, dtype=float, copy=False)
+        model = np.array(model, dtype=np.float64, copy=False)
         instance = GloVeWrapper()
         instance.model = model
         instance.size = model.shape[1]
-        instance.vocab = vocab
         instance.inverse_vocab = {w: i for i, w in enumerate(vocab)}
         instance.mean = np.mean(model, axis=1)
         return instance

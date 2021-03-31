@@ -99,7 +99,7 @@ class BaseClassifier():
         Initialization of for Word embedding matrix
         UNK word will be initialized randomly
         """
-        wv_model = WE_TYPE[self.embedding_type].load_model(self.emedding_file)
+        wv_model = WE_TYPE[self.embedding_type].load_model(self.embedding_file)
         self.embedding_size = wv_model.size
 
         self.embedding = np.zeros(
