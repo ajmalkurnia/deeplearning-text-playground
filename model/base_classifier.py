@@ -12,7 +12,7 @@ import itertools
 import logging
 
 from common.tokenization import Tokenizer
-from common.word_vector import WordEmbedding
+from common.word_vector import WE_TYPE
 from model.AttentionText.attention_text import Attention
 from model.TransformerText.transformer_block import (
     TransformerBlock, TransformerEmbedding, MultiAttention
@@ -99,8 +99,7 @@ class BaseClassifier():
         Initialization of for Word embedding matrix
         UNK word will be initialized randomly
         """
-        wv_model = WordEmbedding(self.embedding_type)
-        wv_model.load_model(self.embedding_file)
+        wv_model = WE_TYPE[self.embedding_type].load_model(self.emedding_file)
         self.embedding_size = wv_model.size
 
         self.embedding = np.zeros(

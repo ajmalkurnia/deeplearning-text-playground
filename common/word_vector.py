@@ -182,3 +182,10 @@ class GloVeWrapper(WordEmbedding):
         instance.inverse_vocab = {w: i for i, w in enumerate(vocab)}
         instance.mean = np.mean(model, axis=1)
         return instance
+
+
+WE_TYPE = {
+    "w2v": Word2VecWrapper,
+    "ft": FastTextWrapper,
+    "glove": GloVeWrapper,
+}
