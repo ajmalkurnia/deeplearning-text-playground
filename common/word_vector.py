@@ -19,6 +19,16 @@ class WordEmbedding():
         raise NotImplementedError()
 
     def get_word_vector(self, word, unk="random"):
+        """
+        Basic implementation to retrieve word vector
+        :param word: str, query word
+        :param unk: str, how to handle unkown words, available options
+            "random": return randomized vector
+            "zeros": return zero vector
+            "mean": return the mean of the model
+            by default it will return None
+        :return word_vector: np.array with shape (size, )
+        """
         try:
             return self.model[word]
         except KeyError:
@@ -58,6 +68,12 @@ class Word2VecWrapper(WordEmbedding):
 
     @staticmethod
     def load_model(path):
+        """
+        Load .bin file of the pretrained vector from original word2vec
+        implementation
+        :param path: str, full path to bin file
+        :return we: Word2VecWrapper, instance of the class
+        """
         model = KeyedVectors.load_word2vec_format(path, binary=True)
         we = Word2VecWrapper(model)
         we.model = model
@@ -78,6 +94,12 @@ class FastTextWrapper(WordEmbedding):
 
     @staticmethod
     def load_model(path):
+        """
+        Load .bin file of the pretrained vector from original fasttext
+        implementation
+        :param path: str, full path to bin file
+        :return we: FastTextWrapper, instance of the class
+        """
         model = fasttext.load_model(path)
         we = FastTextWrapper()
         we.model = model
@@ -86,6 +108,7 @@ class FastTextWrapper(WordEmbedding):
         for word in model.words:
             sum_vector += word
         we.mean_vector = sum_vector/len(model.words)
+        return we
 
 
 class GloVeWrapper(WordEmbedding):
@@ -93,6 +116,15 @@ class GloVeWrapper(WordEmbedding):
         super(GloVeWrapper, self).__init__()
 
     def find_similar_word(self, word, n=10):
+        """
+        Find n-most similar words from query based on cosine similarity
+        :param word: str, query word
+        :param n: int, return top n array
+        :return results: list of tuple, list of n closest words
+            each tupple consists of:
+                word: str,
+                sim_score: float
+        """
         try:
             vector = self.model[self.inverse_vocab[word]]
             sim = np.dot(self.model, vector)
@@ -103,6 +135,16 @@ class GloVeWrapper(WordEmbedding):
             return []
 
     def get_word_vector(self, word, unk="random"):
+        """
+        Implementation to retrieve word vector
+        :param word: str, query word
+        :param unk: str, how to handle unkown words, available options
+            "random": return randomized vector
+            "zeros": return zero vector
+            "mean": return the mean of the model
+            by default it will return None
+        :return word_vector: np.array with shape (size, )
+        """
         try:
             return self.model[self.inverse_vocab[word]]
         except KeyError:
@@ -117,7 +159,12 @@ class GloVeWrapper(WordEmbedding):
 
     @staticmethod
     def load_model(path):
-        # the .txt file
+        """
+        Load .txt file of the pretrained vector from original GloVe
+        implementation
+        :param path: str, full path to bin file
+        :return we: GloVeWrapper, instance of the class
+        """
         model = []
         vocab = []
         with open(path, "r") as f:
