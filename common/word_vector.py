@@ -1,125 +1,137 @@
-import os
-# from glob import glob
-# from zipfile import ZipFile, BadZipFile
-
-from gensim.models import Word2Vec, FastText, fasttext
-from gensim.test.utils import datapath, get_tmpfile
 from gensim.models import KeyedVectors
-from gensim.scripts.glove2word2vec import glove2word2vec
+import fasttext
 import numpy as np
 
 
 class WordEmbedding():
-    def __init__(
-        self, embedding_type="w2v",
-        embedding_size=100, ngram=(3, 6),
-        window_size=5, architecture="sg"
-    ):
-        self.embedding_type = embedding_type
-        self.window = window_size
-        self.size = embedding_size
+    def __init__(self):
+        """
+        Constructor method of WordEmbedding class
+        This class is only meant to load and read the word vector from
+        pretrained file from original word2vec, fasttext, and glove
+        implementation
+        """
+        self.embedding_size = None
         self.model = None
-        if architecture == "sg":
-            self.skip_gram = True
-        else:
-            self.skip_gram = False
-        if ngram is None:
-            ngram = (3, 6)
-        self.min_gram = ngram[0]
-        self.max_gram = ngram[1]
-        self.key_vector_only = False
+        self.mean = None
 
-    def train_embedding(
-        self, sentences, n_iter=100, workers=1,
-        min_count=3, negative_sample=1, key_vector_only=False
-    ):
-        if self.embedding_type == "w2v" and self.key_vector_only:
-            train_corpus = sentences
-            if self.model is None:
-                self.model = Word2Vec(
-                    size=self.size, window=self.window,
-                    min_count=min_count, negative=negative_sample,
-                    workers=workers, sg=int(self.skip_gram))
-                self.model.build_vocab(train_corpus)
-            # self.model.build_vocab()
-            else:
-                self.model.build_vocab(train_corpus, update=True)
-        elif self.embedding_type == "ft" and self.key_vector_only:
-            train_corpus = sentences
-            if self.model is None:
-                self.model = FastText(
-                    sg=int(self.skip_gram), size=self.size,
-                    window=self.window, min_count=min_count,
-                    min_n=self.min_gram, max_n=self.max_gram,
-                    workers=workers, negative=negative_sample)
-                self.model.build_vocab(train_corpus)
-            else:
-                self.model.build_vocab(train_corpus, update=True)
-        elif self.embedding_type == "glove":
-            raise ValueError("GloVe training not supported use official repo")
-        else:
-            raise ValueError(
-                "Invalid Embedding Type or Training not Supported"
-            )
-        train_corpus = sentences
-        self.model.train(
-            train_corpus, epochs=n_iter, total_examples=self.model.corpus_count
-        )
-        if self.key_vector_only:
-            self.model = self.model.wv
+    def find_similar_word(self, word, n=10):
+        raise NotImplementedError()
 
-    def retrieve_vector(self, word):
+    def get_word_vector(self, word, unk="random"):
         try:
-            if self.key_vector_only:
-                return self.model[word]
-            else:
-                return self.model.wv[word]
+            return self.model[word]
         except KeyError:
-            return np.random.random(self.size)
+            if unk == "random":
+                return np.random.normal(size=self.size)
+            elif unk == "zeros":
+                return np.zeros(shape=self.size)
+            elif unk == "mean":
+                return self.mean_vector
+            else:
+                return None
+
+    @staticmethod
+    def load_model(path):
+        """
+        Load .bin formatted pretrained file
+        support for other format (.vec, .txt) will be added later
+
+        :param path: str, full path to pretrained file
+            available emebdding types
+                w2v: Word2Vec
+                ft: FastText
+                glove: GloVe
+        """
+        raise NotImplementedError()
+
+
+class Word2VecWrapper(WordEmbedding):
+    def __init__(self):
+        super(Word2VecWrapper, self).__init__()
 
     def find_similar_word(self, word, n=10):
         try:
-            if self.key_vector_only:
-                return self.model.most_similar_cosmul(positive=[word], topn=n)
-            else:
-                return self.model.most_similar(positive=[word], topn=n)
+            return self.model.similar_by_word(word, topn=n)
         except KeyError:
             return []
 
-    # def save_model(self, file_name):
-    #     self.model.save("{}.model".format(file_name))
-    #     we_model_files = glob("{}.model*".format(file_name))
-    #     with ZipFile(file_name, "w") as zipf:
-    #         for we_file in we_model_files:
-    #             zipf.write(we_file)
-    #             os.remove(we_file)
+    @staticmethod
+    def load_model(path):
+        model = KeyedVectors.load_word2vec_format(path, binary=True)
+        we = Word2VecWrapper(model)
+        we.model = model
+        we.size = model.vector_size
+        we.mean_vector = np.mean(model.vectors, axis=0)
+        return we
 
-    def load_model(self, file_name):
-        # try:
-        #     with ZipFile(file_name, "r") as zipf:
-        #         zipf.extractall("/tmp/")
-        #         nl = zipf.namelist()
-        #     fn = [name for name in nl if name.endswith(".model")][0]
-        #     path = "/tmp/" + fn
-        # except BadZipFile:
-        path = file_name
 
-        if self.embedding_type == "w2v":
-            self.model = KeyedVectors.load_word2vec_format(path)
-        elif self.embedding_type == "ft":
-            try:
-                self.model = fasttext.load_facebook_model(path)
-            except NotImplementedError:
-                self.model = KeyedVectors.load_word2vec_format(path)
-                self.key_vector_only = True
-        elif self.embedding_type == "glove":
-            self.key_vector_only = True
-            """path name: .txt file"""
-            try:
-                glove_file = datapath(os.path.abspath(path))
-                tmp_file = get_tmpfile("/tmp/g2w2v.txt")
-                glove2word2vec(glove_file, tmp_file)
-                self.model = KeyedVectors.load_word2vec_format(tmp_file)
-            except UnicodeDecodeError:
-                self.model = KeyedVectors.load(os.path.abspath(path))
-        self.size = self.model.wv.vector_size
+class FastTextWrapper(WordEmbedding):
+    def __init__(self):
+        super(FastTextWrapper, self).__init__()
+
+    def find_similar_word(self, word, n=10):
+        try:
+            return self.model.get_nearest_neighbor(n)
+        except KeyError:
+            return []
+
+    @staticmethod
+    def load_model(path):
+        model = fasttext.load_model(path)
+        we = FastTextWrapper()
+        we.model = model
+        we.size = model.get_dimension()
+        sum_vector = np.zeros(we.size)
+        for word in model.words:
+            sum_vector += word
+        we.mean_vector = sum_vector/len(model.words)
+
+
+class GloVeWrapper(WordEmbedding):
+    def __init__(self):
+        super(GloVeWrapper, self).__init__()
+
+    def find_similar_word(self, word, n=10):
+        try:
+            vector = self.model[self.inverse_vocab[word]]
+            sim = np.dot(self.model, vector)
+            sim /= np.linalg.norm(self.model, axis=1)
+            sim /= np.linalg.norm(vector)
+            return [(self.vocab[i], sim[i]) for i in np.argsort(-sim)[1:n+1]]
+        except KeyError:
+            return []
+
+    def get_word_vector(self, word, unk="random"):
+        try:
+            return self.model[self.inverse_vocab[word]]
+        except KeyError:
+            if unk == "random":
+                return np.random.normal(size=self.size)
+            elif unk == "zeros":
+                return np.zeros(shape=self.size)
+            elif unk == "mean":
+                return self.mean_vector
+            else:
+                return None
+
+    @staticmethod
+    def load_model(path):
+        # the .txt file
+        model = []
+        vocab = []
+        with open(path, "r") as f:
+            for line in f:
+                data = line.split(" ")
+                if data[0] == "<unk>":
+                    continue
+                vocab.append(data[0])
+                model.append([float(i) for i in data[1:]])
+        model = np.array(model, dtype=float, copy=False)
+        instance = GloVeWrapper()
+        instance.model = model
+        instance.size = model.shape[1]
+        instance.vocab = vocab
+        instance.inverse_vocab = {w: i for i, w in enumerate(vocab)}
+        instance.mean = np.mean(model, axis=1)
+        return instance
