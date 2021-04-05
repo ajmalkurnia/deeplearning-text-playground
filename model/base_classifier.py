@@ -128,7 +128,7 @@ class BaseClassifier():
         special_token = self.add_special_token()
         tokenizer = Tokenizer(self.vocab_size)
         for idx, token in enumerate(special_token):
-            tokenizer.vocab_index[token] = idx
+            tokenizer.vocab_index[token] = idx + 1
         tokenizer.build_vocab(tokenized_corpus)
         self.vocab = tokenizer.vocab_index
         if len(self.vocab) < self.vocab_size:
@@ -147,7 +147,7 @@ class BaseClassifier():
         for text in corpus:
             idx_list = []
             for idx, token in enumerate(text):
-                idx_list.append(self.vocab.get(token, 0))
+                idx_list.append(self.vocab.get(token, 1))
             v_input.append(idx_list)
         return pad_sequences(v_input, self.max_input, padding='post')
 
