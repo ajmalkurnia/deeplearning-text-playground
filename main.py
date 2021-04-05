@@ -21,16 +21,17 @@ def main(args):
     if args.logfile:
         log_parameter["filename"] = args.logfile
         log_parameter["filemode"] = "w"
-
-    logging.basicConfig(**log_parameter)
-    consolelog = logging.StreamHandler()
-    consolelog.setLevel(logging.DEBUG)
-    consolelog.setFormatter(
-        logging.Formatter(
-            "%(levelname)s %(name)s %(funcName)s:%(lineno)d %(message)s"
+        logging.basicConfig(**log_parameter)
+        consolelog = logging.StreamHandler()
+        consolelog.setLevel(logging.DEBUG)
+        consolelog.setFormatter(
+            logging.Formatter(
+                "%(levelname)s %(name)s %(funcName)s:%(lineno)d %(message)s"
+            )
         )
-    )
-    logging.getLogger("").addHandler(consolelog)
+        logging.getLogger("").addHandler(consolelog)
+    else:
+        logging.basicConfig(**log_parameter)
 
     try:
         data = DATASET[args.task](args)
