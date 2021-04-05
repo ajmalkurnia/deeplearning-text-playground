@@ -10,9 +10,9 @@ from common.utils import split_data
 
 class Dataset():
     def __init__(self, args):
-        self.tasks = args.task
-        self.path = args.datapath
-        self.arch = args.architecture
+        # self.tasks = args.task
+        self.path = args
+        # self.arch = args.architecture
 
     def get_data(self):
         raise NotImplementedError()
@@ -151,9 +151,9 @@ class POSTagID(Dataset):
     LANG = "id"
     TASK = "sequence labelling"
 
-    def open_data(self):
+    def open_data(self, path):
         data = []
-        with open(self.path, "r") as f:
+        with open(path, "r") as f:
             sentences = f.read().split("\n</kalimat>")
             for sentence in sentences:
                 token_sequence = []
@@ -168,7 +168,7 @@ class POSTagID(Dataset):
                     "tokenized_text": token_sequence,
                     "tag": tag_sequenece
                 })
-        return data
+        return pd.DataFrame(data)
 
     def get_data(self):
         path = f"{self.path}/Indonesian_Manually_Tagged_Corpus_ID.tsv"
@@ -184,11 +184,11 @@ class POSTagUDID(Dataset):
     def __init__(self, args):
         super(POSTagUDID, self).__init__(args)
 
-    def open_data(self):
+    def open_data(self, path):
         data = []
         token_sequence = []
         tag_sequence = []
-        with open(self.path, "r") as f:
+        with open(path, "r") as f:
             for line in f:
                 if line[0] == "#":
                     continue
@@ -203,7 +203,7 @@ class POSTagUDID(Dataset):
                     })
                     token_sequence = []
                     tag_sequence = []
-        return data
+        return pd.DataFrame(data)
 
     def get_data(self):
         files = glob(f"{self.path}/*.conllu")
@@ -226,11 +226,11 @@ class NERID(Dataset):
     def __init__(self, args):
         super(NERID, self).__init__(args)
 
-    def open_data(self):
+    def open_data(self, path):
         data = []
         token_sequence = []
         tag_sequence = []
-        with open(self.path, "r") as f:
+        with open(path, "r") as f:
             for line in f:
                 if line.strip() != "":
                     words_detail = line.strip().split()
@@ -245,7 +245,7 @@ class NERID(Dataset):
                     })
                     token_sequence = []
                     tag_sequence = []
-        return data
+        return pd.DataFrame(data)
 
     def get_data(self):
         files = glob(f"{self.path}/*.txt")
@@ -402,7 +402,7 @@ class NEREN(Dataset):
                     })
                     token_sequence = []
                     tag_sequenece = []
-        return data
+        return pd.DataFrame(data)
 
     def get_data(self):
         files = glob(f"{self.path}/*.conll")
@@ -430,7 +430,7 @@ DATASET = {
     "postag_id": POSTagID,
     # https://github.com/UniversalDependencies/UD_Indonesian-GSD
     # Postag on Indonesain UD dataset
-    "postag_gsd_id": POSTagUDID,
+    "postag_ud_id": POSTagUDID,
     # https://github.com/khairunnisaor/idner-news-2k
     # Indonesian Named Entity Recognition dataset
     "ner_id": NERID,
