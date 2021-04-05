@@ -170,6 +170,12 @@ class POSTagID(Dataset):
                 })
         return data
 
+    def get_data(self):
+        path = f"{self.path}/Indonesian_Manually_Tagged_Corpus_ID.tsv"
+        df = self.open_data(path)
+        data = split_data((df["tokenized_text"], df["tag"]))
+        return data
+
 
 class POSTagUDID(Dataset):
     LANG = "id"
@@ -199,6 +205,19 @@ class POSTagUDID(Dataset):
                     tag_sequence = []
         return data
 
+    def get_data(self):
+        files = glob(f"{self.path}/*.conllu")
+        data = [None] * 3
+        for filen in files:
+            df = self.open_data(filen)
+            if "dev" in filen:
+                data[2] = (df["tokenized_text"], df["tag"])
+            elif "test" in filen:
+                data[1] = (df["tokenized_text"], df["tag"])
+            elif "train" in filen:
+                data[0] = (df["tokenized_text"], df["tag"])
+        return data
+
 
 class NERID(Dataset):
     LANG = "id"
@@ -226,6 +245,19 @@ class NERID(Dataset):
                     })
                     token_sequence = []
                     tag_sequence = []
+        return data
+
+    def get_data(self):
+        files = glob(f"{self.path}/*.txt")
+        data = [None] * 3
+        for filen in files:
+            df = self.open_data(filen)
+            if "dev" in filen:
+                data[2] = (df["tokenized_text"], df["tag"])
+            elif "test" in filen:
+                data[1] = (df["tokenized_text"], df["tag"])
+            elif "train" in filen:
+                data[0] = (df["tokenized_text"], df["tag"])
         return data
 
 
@@ -372,6 +404,19 @@ class NEREN(Dataset):
                     tag_sequenece = []
         return data
 
+    def get_data(self):
+        files = glob(f"{self.path}/*.conll")
+        data = [None] * 3
+        for filen in files:
+            df = self.open_data(filen)
+            if "dev" in filen:
+                data[2] = (df["tokenized_text"], df["tag"])
+            elif "test" in filen:
+                data[1] = (df["tokenized_text"], df["tag"])
+            elif "train" in filen:
+                data[0] = (df["tokenized_text"], df["tag"])
+        return data
+
 
 DATASET = {
     # https://github.com/meisaputri21/Indonesian-Twitter-Emotion-Dataset
@@ -400,7 +445,7 @@ DATASET = {
     "fake_news_en": LIAR,
     # https://github.com/UniversalDependencies/UD_English-EWT
     # UD english
-    "postag_en": POSTagUDID,
+    "postag_en": POSTagUDID,  # Its the same format so just re-use this
     # https://github.com/leondz/emerging_entities_17
     # WNUT 2017
     "ner_en": NEREN
