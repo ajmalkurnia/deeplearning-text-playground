@@ -48,7 +48,8 @@ class HANClassifier(BaseClassifier):
             input_dim=self.vocab_size, output_dim=self.embedding_size,
             input_length=self.max_input,
             embeddings_initializer=self.embedding,
-            trainable=self.train_embedding
+            trainable=self.train_embedding,
+            mask_zero=True
         )(input_layer)
         lower_rnn_out = self.__get_rnn(embedding_layer)
         lower_attention = Attention("hierarchy")(lower_rnn_out)

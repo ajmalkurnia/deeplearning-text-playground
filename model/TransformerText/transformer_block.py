@@ -79,7 +79,10 @@ class TransformerBlock(Layer):
         self.fcn_dropout = Dropout(self.dropout)
         self.fcn_layer_norm = LayerNormalization(epsilon=1e-6)
 
-    def call(self, inputs, training):
+    def call(self, inputs, training, mask=None):
+        if mask is not None:
+            casted_mask = tf.expand_dims(tf.cast(mask, "float32"), -1)
+            inputs = inputs * casted_mask
         mha_out = self.mha([inputs, inputs])
         mha_out = self.att_dropout(mha_out, training=training)
         mha_out = self.att_layer_norm(inputs + mha_out)
@@ -137,7 +140,8 @@ class TransformerEmbedding(Layer):
             input_dim=self.vocab_size,
             output_dim=self.embed_dim,
             embeddings_initializer=self.token_initializer,
-            trainable=self.trainable_embedding
+            trainable=self.trainable_embedding,
+            zero_mask=True
         )
 
         self.pos_emb = Embedding(

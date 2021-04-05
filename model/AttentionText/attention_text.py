@@ -112,7 +112,7 @@ class Attention(Layer):
         # actual loss = penalty_factor * ||A.At-I||
         self.add_loss(self.penalty * frobenius_norm)
 
-    def call(self, inputs):
+    def call(self, inputs, mask=None):
         """
         Run attention mechanism
         :param inputs: a list [query, key]/tensor query,
@@ -136,10 +136,16 @@ class Attention(Layer):
 
         if key is not None:
             key = tf.expand_dims(key, 1)
-        # 'self' scoring will return (batch, seq, hid)
-        # others will return (bacth, seq, 1)
-        score = self.score_function(query, key)
 
+        if mask is not None:
+            casted_mask = tf.expand_dims(tf.cast(mask, "float32"), -1)
+            query = query * casted_mask
+            # 'self' scoring will return (batch, seq, hid)
+            # others will return (bacth, seq, 1)
+            score = self.score_function(query, key)
+            score = score * casted_mask
+        else:
+            score = self.score_function(query, key)
         # normalized attention score
         attention_weights = Activation("softmax")(score)
 

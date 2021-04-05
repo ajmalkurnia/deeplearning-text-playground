@@ -36,7 +36,8 @@ class RCNNClassifier(BaseClassifier):
             input_dim=self.vocab_size, output_dim=self.embedding_size,
             input_length=self.max_input,
             embeddings_initializer=self.embedding,
-            trainable=self.train_embedding
+            trainable=self.train_embedding,
+            mask_zero=True
         )
         center_embedding = embedding_layer(input_layer)
         # Get left context by shifting the data to the right

@@ -56,7 +56,8 @@ class CNNClassifier(BaseClassifier):
             self.embedding_size,
             input_length=self.max_input,
             embeddings_initializer=self.embedding,
-            trainable=self.train_embedding
+            trainable=self.train_embedding,
+            mask_zero=True
         )
         x = embedding_layer(inputs)
         # 1 is stacked the usual way (like image CNN),
