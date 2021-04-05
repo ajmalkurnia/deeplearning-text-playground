@@ -29,7 +29,7 @@ Playing with some deep learning for various text proccesing task, mainly using k
 There is jupyter notebook available for each task (so far only classification) that both provides detailed explanation of the usage
 
 ## Data
-For each task, there are several dataset that used for evaluation in indonesian and english
+There are parser for several dataset for each tasks. Results and configurations will be added later
 
 ### Classification
 
@@ -62,15 +62,15 @@ Source : [Kaggle](https://www.kaggle.com/amananandrai/ag-news-classification-dat
 
 ### Sequence Labelling
 
-#### POS-Tag 1 (id)
+#### IDN Tagged Corpus (id)
 
-#### POS-Tag 2 (id)
+#### Universal Dependencies ID (id)
 
 #### NER (id)
 
-#### POS-Tag (en)
+#### Universal Dependencies EN (en)
 
-#### POS-Tag (en)
+#### NER (en)
 
 ## Dependencies
 - tensorflow==2.4.1
