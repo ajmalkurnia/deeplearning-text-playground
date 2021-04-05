@@ -1,6 +1,7 @@
 import logging
 from sklearn.metrics import classification_report
 from model.CNNText.cnn_classifier import CNNClassifier
+from keras.optimizers import Adam
 
 
 def main(args, data):
@@ -13,7 +14,8 @@ def main(args, data):
         "conv_type": args.convtype,
         "embedding_type": args.embeddingtype,
         "embedding_file": args.embeddingfile,
-        "input_size": data.get_sequence_length()
+        "input_size": data.get_sequence_length(),
+        "optimizer": Adam(lr=0.0001)
     }
     if args.convtype == "parallel":
         arch_config["conv_layers"] = [
