@@ -22,13 +22,13 @@ class MultiAttention(Layer):
     def build(self, input_shape):
         self.attention_heads = [
             (
-                Dense(self.dim_k),  # Wq
-                Dense(self.dim_k),  # Wk
-                Dense(self.dim_v)   # Wv
+                Dense(self.dim_k, use_bias=False),  # Wq
+                Dense(self.dim_k, use_bias=False),  # Wk
+                Dense(self.dim_v, use_bias=False)   # Wv
             ) for i in range(self.n_heads)
         ]
         # Get hidden/feature shape of the input
-        self.W_o = Dense(input_shape[0][2])
+        self.W_o = Dense(input_shape[0][2], use_bias=False)
 
     def attention_score(self, q, k, v):
         # scaled dot attention computation
@@ -82,7 +82,7 @@ class TransformerBlock(Layer):
     def call(self, inputs, training, mask=None):
         if mask is not None:
             casted_mask = tf.expand_dims(tf.cast(mask, "float32"), -1)
-            inputs = inputs * casted_mask
+            inputs *= casted_mask
         mha_out = self.mha([inputs, inputs])
         mha_out = self.att_dropout(mha_out, training=training)
         mha_out = self.att_layer_norm(inputs + mha_out)
@@ -140,8 +140,8 @@ class TransformerEmbedding(Layer):
             input_dim=self.vocab_size,
             output_dim=self.embed_dim,
             embeddings_initializer=self.token_initializer,
-            trainable=self.trainable_embedding,
-            zero_mask=True
+            trainable=self.trainable_embedding
+            # mask_zero=True
         )
 
         self.pos_emb = Embedding(

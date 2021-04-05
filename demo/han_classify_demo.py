@@ -43,7 +43,7 @@ def main(args, data):
     y_pred = han.test(X_test)
     # evaluation report
     logger.info("Evaluation")
-    logger.info(classification_report(y_test, y_pred, digits=5))
+    logger.info(f"\n{classification_report(y_test, y_pred, digits=5)}")
     if args.savemodel:
         logger.info("Saving file")
         han.save(args.savemodel)
