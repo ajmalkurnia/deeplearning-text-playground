@@ -10,9 +10,8 @@ from common.utils import split_data
 
 class Dataset():
     def __init__(self, args):
-        # self.tasks = args.task
         self.path = args
-        # self.arch = args.architecture
+        self.arch = args.architecture
 
     def get_data(self):
         raise NotImplementedError()
@@ -34,7 +33,7 @@ class Dataset():
 
 class EmotionID(Dataset):
     LANG = "id"
-    TASK = "sentence classification"
+    TASK = "classification"
 
     def __init__(self, args):
         super(EmotionID, self).__init__(args)
@@ -73,7 +72,7 @@ class EmotionID(Dataset):
 
 class IndoSum(Dataset):
     LANG = "id"
-    TASK = "document_classification"
+    TASK = "classification"
 
     def __init__(self, args):
         super(IndoSum, self).__init__(args)
@@ -149,7 +148,7 @@ class IndoSum(Dataset):
 
 class POSTagID(Dataset):
     LANG = "id"
-    TASK = "sequence labelling"
+    TASK = "sequence-classification"
 
     def open_data(self, path):
         data = []
@@ -179,7 +178,7 @@ class POSTagID(Dataset):
 
 class POSTagUDID(Dataset):
     LANG = "id"
-    TASK = "Sequence labelling"
+    TASK = "sequence-classification"
 
     def __init__(self, args):
         super(POSTagUDID, self).__init__(args)
@@ -221,7 +220,7 @@ class POSTagUDID(Dataset):
 
 class NERID(Dataset):
     LANG = "id"
-    TASK = "Sequence labelling"
+    TASK = "sequence-classification"
 
     def __init__(self, args):
         super(NERID, self).__init__(args)
@@ -263,7 +262,7 @@ class NERID(Dataset):
 
 class IMDB(Dataset):
     LANG = "en"
-    TASK = "Document classification"
+    TASK = "classification"
 
     def __init__(self, args):
         super(IMDB, self).__init__(args)
@@ -313,7 +312,7 @@ class IMDB(Dataset):
 
 class AGNews(Dataset):
     LANG = "en"
-    TASK = "Short document/sentence Classification"
+    TASK = "classification"
 
     def __init__(self, args):
         super(AGNews, self).__init__(args)
@@ -348,7 +347,7 @@ class AGNews(Dataset):
 
 class LIAR(Dataset):
     LANG = "en"
-    TASK = "Sentence Classification"
+    TASK = "classification"
 
     def __init__(self, args):
         super(LIAR, self).__init__(args)
@@ -379,7 +378,7 @@ class LIAR(Dataset):
 
 class NEREN(Dataset):
     LANG = "en"
-    TASK = "Sequence Labelling"
+    TASK = "sequence-labelling"
 
     def __init__(self, args):
         super(NEREN, self).__init__(args)

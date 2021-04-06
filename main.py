@@ -4,12 +4,13 @@ from common.data import DATASET
 from demo import rnn_classify_demo, cnn_classify_demo
 from demo import transformer_classify_demo, han_classify_demo
 from demo import rcnn_classify_demo
+
 DEMOS = {
-    "rnn": rnn_classify_demo,
-    "cnn": cnn_classify_demo,
-    "transformer": transformer_classify_demo,
-    "han": han_classify_demo,
-    "rcnn": rcnn_classify_demo
+    "rnn-classification": rnn_classify_demo,
+    "cnn-classification": cnn_classify_demo,
+    "transformer-classification": transformer_classify_demo,
+    "han-classification": han_classify_demo,
+    "rcnn-classification": rcnn_classify_demo
 }
 
 
@@ -39,7 +40,7 @@ def main(args):
         raise KeyError("Invalid Task")
 
     try:
-        demo = DEMOS[args.architecture]
+        demo = DEMOS[f"{args.architecture}-{data.TASK}"]
     except KeyError:
         raise KeyError("Invalid sub-command")
 
