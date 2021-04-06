@@ -4,30 +4,24 @@ from keras.layers import GlobalMaxPool1D, Dense
 from keras.utils import to_categorical
 from keras.initializers import Constant, RandomUniform
 from keras.preprocessing.sequence import pad_sequences
-from keras.models import Model, Input, load_model
-from keras.callbacks import EarlyStopping
+from keras.models import Model, Input
 from tensorflow_addons.layers.crf import CRF
 
-from common.word_vector import WE_TYPE
 from .tf_model_crf import ModelWithCRFLoss
 
-from tempfile import TemporaryDirectory
-from collections import defaultdict
-from zipfile import ZipFile
 import numpy as np
-import pickle
 import string
 import os
 
+from model.base_tagger import BaseTagger
 
-class DLHybridTagger():
+
+class DLHybridTagger(BaseTagger):
     def __init__(
-        self, seq_length=100, word_length=50, char_embed_size=30,
-        word_embed_size=100, word_embed_file=None, we_type="glorot_normal",
+        self, word_length=50, char_embed_size=30,
         recurrent_dropout=0.5, embedding_dropout=0.5, rnn_units=100,
-        optimizer="adam", loss=None, vocab_size=10000,
-        pre_outlayer_dropout=0.5, char_embedding="cnn", crf=True,
-        conv_layers=[[30, 3, -1], [30, 2, -1], [30, 4, -1]],
+        pre_outlayer_dropout=0.5, use_cnn=True, use_crf=True,
+        conv_layers=[[30, 3, -1], [30, 2, -1], [30, 4, -1]], **kwargs
     ):
         """
         Deep learning based sequence tagger.
@@ -73,45 +67,23 @@ class DLHybridTagger():
             character information will be obtained by applying concatenation
                 and GlobalMaxPooling
         """
-
-        self.seq_length = seq_length
+        super(DLHybridTagger, self).init__(**kwargs)
         self.word_length = word_length
-
         self.char_embed_size = char_embed_size
-        # Will be overide with pretrained file embedding
-        self.word_embed_size = word_embed_size
-        self.word_embed_file = word_embed_file
-        self.we_type = we_type
-
-        if we_type in ["w2v", "ft", "glove"] and word_embed_file is None:
-            raise ValueError(
-                "Supply parameter word_embed_file when using w2v/ft/glove embedding"  # noqa
-            )
 
         self.rnn_units = rnn_units
         self.rd = recurrent_dropout
         self.ed = embedding_dropout
 
         self.pre_outlayer_dropout = pre_outlayer_dropout
-        self.crf = crf
-
-        self.char_embedding = char_embedding
-        if self.char_embedding not in ["cnn", None]:
-            raise ValueError(
-                "Invalid character embedding, valid value: 'cnn' or None"
-            )
-
+        self.use_crf = use_crf
+        self.use_cnn = use_cnn
         self.conv_layers = conv_layers
 
-        if loss is None and self.crf:
+        if self.loss is None and self.crf:
             self.loss = "sparse_categorical_crossentropy"
-        elif loss is None:
+        elif self.loss is None:
             self.loss = "categorical_crossentropy"
-        else:
-            self.loss = loss
-
-        self.optimizer = optimizer
-        self.vocab_size = vocab_size
 
     def __get_char_embedding(self):
         """
@@ -151,7 +123,7 @@ class DLHybridTagger():
         embedding_block = TimeDistributed(embedding_block)(seq_inp_layer)
         return seq_inp_layer, embedding_block
 
-    def __init_model(self, y):
+    def init_model(self, y):
         """
         Initialize the network model
         """
@@ -167,7 +139,7 @@ class DLHybridTagger():
         if self.ed > 0:
             word_embed_block = Dropout(self.ed)(word_embed_block)
         # Char Embedding
-        if self.char_embedding == "cnn":
+        if self.use_cnn:
             input_char_layer, char_embed_block = self.__get_char_embedding()
             input_layer = [input_char_layer, input_word_layer]
             embed_block = Concatenate()([char_embed_block, word_embed_block])
@@ -186,9 +158,7 @@ class DLHybridTagger():
                 chain_initializer=Constant(self.__compute_transition_matrix(y))
             )
             out = crf(self.model)
-            self.model = Model(
-                inputs=input_layer, outputs=out
-            )
+            self.model = Model(inputs=input_layer, outputs=out)
             self.model.summary()
             # Subclassing to properly compute crf loss
             self.model = ModelWithCRFLoss(self.model)
@@ -199,29 +169,27 @@ class DLHybridTagger():
             ))(self.model)
             self.model = Model(input_layer, out)
             self.model.summary()
-        self.model.compile(
-            loss=self.loss,
-            optimizer=self.optimizer
-        )
+        self.model.compile(loss=self.loss, optimizer=self.optimizer)
 
-    def __compute_transition_matrix(self, y):
-        transition_matrix = np.zeros((self.n_label+1, self.n_label+1))
+    def __init_transition_matrix(self, y):
+        n_labels = self.n_label + 1
+        self.transition_matrix = np.zeros((n_labels, n_labels))
         for data in y:
             for idx, label in enumerate(data[:self.seq_length]):
                 if idx:
                     current = self.label2idx[label]
                     prev = self.label2idx[data[idx-1]]
-                    transition_matrix[prev][current] += 1
-            transition_matrix[current][0] += 1
+                    self.transition_matrix[prev][current] += 1
+            self.transition_matrix[current][0] += 1
             zero_pad = self.seq_length - len(data)
             if zero_pad > 1:
-                transition_matrix[0][0] += zero_pad
-        for row in transition_matrix:
+                self.transition_matrix[0][0] += zero_pad
+        for row in self.transition_matrix:
             s = sum(row)
-            row[:] = (row + 1)/(s+self.n_label+1)
-        return transition_matrix
+            row[:] = (row + 1)/(s+n_labels)
+        return self.transition_matrix
 
-    def __init_c2i(self):
+    def init_c2i(self):
         """
         Initialize character to index
         """
@@ -230,56 +198,7 @@ class DLHybridTagger():
         self.char2idx["UNK"] = len(self.char2idx)+1
         self.n_chars = len(self.char2idx)+1
 
-    def __init_w2i(self, data):
-        """
-        Initialize word to index
-        """
-        vocab = defaultdict(int)
-        for s in data:
-            for w in s:
-                vocab[w] += 1
-        vocab = sorted(vocab.items(), key=lambda d: (d[1], d[0]))
-        vocab = [v[0] for v in vocab]
-        # +1 Padding +1 UNK
-        vocab = list(reversed(vocab))[:self.vocab_size-2]
-        self.word2idx = {word: idx+1 for idx, word in enumerate(vocab)}
-        self.word2idx["[UNK]"] = len(self.word2idx)+1
-        self.n_words = len(self.word2idx)+1
-
-    def __init_l2i(self, data):
-        """
-        Initialize label to index
-        """
-        label = list(set([lb for sub in data for lb in sub]))
-        self.n_label = len(label)
-        self.label2idx = {ch: idx+1 for idx, ch in enumerate(sorted(label))}
-        self.idx2label = {idx: ch for ch, idx in self.label2idx.items()}
-
-    def __init_wv_embedding(self):
-        """
-        Initialization of for Word embedding matrix
-        UNK word will be initialized randomly
-        """
-        wv_model = WE_TYPE[self.we_type].load_model(self.word_embed_file)
-        self.word_embed_size = wv_model.size
-
-        self.word_embedding = np.zeros(
-            (self.vocab_size+1, wv_model.size), dtype=float
-        )
-        for word, idx in self.word2idx.items():
-            self.word_embedding[idx, :] = wv_model.retrieve_vector(word)
-
-    def __init_embedding(self):
-        """
-        Initialize argument for word embedding initializer
-        """
-        if self.we_type in ["w2v", "ft", "glove"]:
-            self.__init_wv_embedding()
-            self.word_embedding = Constant(self.word_embedding)
-        else:
-            self.word_embedding = self.we_type
-
-    def __char_vector(self, inp_seq):
+    def get_char_vector(self, inp_seq):
         """
         Get character vector of the input sequence
         :param inp_seq: list of list of string, tokenized input corpus
@@ -299,22 +218,6 @@ class DLHybridTagger():
                         vector_seq[i, j, k] = self.char2idx["UNK"]
         return vector_seq
 
-    def __word_vector(self, inp_seq):
-        """
-        Get word vector of the input sequence
-        :param inp_seq: list of list of string, tokenized input corpus
-        :return vector_seq: 2D numpy array, input vector on word level
-        """
-        vector_seq = np.zeros((len(inp_seq), self.seq_length))
-        for i, data in enumerate(inp_seq):
-            data = data[:self.seq_length]
-            for j, word in enumerate(data):
-                if word in self.word2idx:
-                    vector_seq[i][j] = self.word2idx[word]
-                else:
-                    vector_seq[i][j] = self.word2idx["[UNK]"]
-        return vector_seq
-
     def vectorize_input(self, inp_seq):
         """
         Prepare vector of the input data
@@ -323,12 +226,13 @@ class DLHybridTagger():
         :return char_vector: 3D numpy array, input vector on character level
             return None when not using any char_embedding
         """
-        word_vector = self.__word_vector(inp_seq)
-        if self.char_embedding:
-            char_vector = self.__char_vector(inp_seq)
+        input_vector = {}
+        input_vector["word"] = self.get_word_vector(inp_seq)
+        if self.use_cnn:
+            input_vector["char"] = self.get_char_vector(inp_seq)
         else:
-            char_vector = None
-        return word_vector, char_vector
+            input_vector = input_vector["word"]
+        return input_vector
 
     def vectorize_label(self, out_seq):
         """
@@ -370,22 +274,6 @@ class DLHybridTagger():
             label_seq.append(tmp)
         return label_seq
 
-    def get_greedy_label(self, pred_sequence, input_data):
-        """
-        Get label sequence in greedy fashion
-        :param pred_sequence: 3D numpy array, prediction results
-        :param input_data: list of list of string, tokenized input corpus
-        :return label_seq: list of list of string, readable label sequence
-        """
-        label_seq = []
-        for i, s in enumerate(pred_sequence):
-            tmp_pred = []
-            for j, w in enumerate(s):
-                if j < len(input_data[i]):
-                    tmp_pred.append(self.idx2label[np.argmax(w[1:])+1])
-            label_seq.append(tmp_pred)
-        return label_seq
-
     def devectorize_label(self, pred_sequence, input_data):
         """
         Get readable label sequence
@@ -398,156 +286,63 @@ class DLHybridTagger():
         else:
             return self.get_greedy_label(pred_sequence, input_data)
 
-    def prepare_data(self, X, y=None):
-        """
-        Prepare input and label data for the input
-        :param X: list of list of string, tokenized input corpus
-        :param y: list of list of string, label sequence
-        :return X_input: dict, data input
-        :return y_vector: numpy array/None, vector of label data
-        """
-        vector_word_X, vector_char_X = self.vectorize_input(X)
-        X_input = {"word": vector_word_X}
-        if self.char_embedding:
-            X_input["char"] = vector_char_X
+    def init_training(self, X, y):
+        super().prepare_training(X, y)
+        if self.use_crf:
+            self.__init_transition_matrix(y)
+        if self.use_cnn:
+            self.init_c2i()
 
-        vector_y = None
-        if y is not None:
-            vector_y = self.vectorize_label(y)
-        return X_input, vector_y
-
-    def train(self, X, y, n_epoch=10, valid_split=None, batch_size=128):
-        """
-        Prepare input and label data for the input
-        :param X: list of list of string, tokenized input corpus
-        :param y: list of list of string, label sequence
-        :param n_epoch: int, number of training epoch
-        :param valid_split: tuple, validation data
-            shape: (X_validation, y_validation)
-        :param batch_size: int, size of the batch
-        :return history: output of the fit method
-        """
-        self.__init_l2i(y)
-        if self.char_embedding:
-            self.__init_c2i()
-
-        self.__init_w2i(X)
-        self.__init_embedding()
-        self.__init_model(y)
-        X_train, y_train = self.prepare_data(X, y)
-        if valid_split:
-            valid_split = self.prepare_data(valid_split[0], valid_split[1])
-            es = EarlyStopping(
-                monitor="val_crf_loss" if self.crf else "val_loss",
-                patience=10,
-                verbose=1,
-                mode="min",
-                restore_best_weights=True
-            )
-            callback = [es]
-        else:
-            callback = []
-        history = self.model.fit(
-            X_train,
-            y_train,
-            batch_size=batch_size,
-            epochs=n_epoch,
-            validation_data=valid_split,
-            verbose=1,
-            callbacks=callback
-        )
-        return history
-
-    def predict(self, X):
-        """
-        Perform prediction
-        :param X: list of list of string, tokenized input data
-        :return label_result: list of list of string, prediction results
-        """
-        X_test, _ = self.prepare_data(X)
-        pred_result = self.model.predict(X_test)
-        label_result = self.devectorize_label(pred_result, X)
-        return label_result
-
-    def save(self, filepath):
-        """
-        Write the model and class parameter into a zip file
-        :param filepath: string, path of saved file with ".zip" format
-        """
-        filename = filepath.split("/")[-1].split(".")[0]
-        filenames = {
-            "model": f"{filename}_network",
-            "class_param": f"{filename}_class.pkl"
-        }
-        with TemporaryDirectory() as tmp_dir:
-            class_param = {
-                "label2idx": self.label2idx,
-                "word2idx": self.word2idx,
-                "seq_length": self.seq_length,
-                "word_length": self.word_length,
-                "idx2label": self.idx2label,
-                "crf": self.crf,
-                "char_embedding": self.char_embedding
-            }
-            if self.char_embedding:
-                class_param["char2idx"] = self.char2idx
-            with open(f"{tmp_dir}/{filenames['class_param']}", "wb") as pkl:
-                pickle.dump(class_param, pkl)
-            network_path = f"{tmp_dir}/{filenames['model']}"
-            self.model.save(network_path, save_format="tf")
-            with ZipFile(filepath, "w") as zipf:
+    def save_crf(self, filepath, zipf):
+        for dirpath, dirs, files in os.walk(filepath):
+            if files == []:
                 zipf.write(
-                    f"{tmp_dir}/{filenames['class_param']}",
-                    filenames['class_param']
+                    dirpath, "/".join(dirpath.split("/")[-2:])+"/"
                 )
-                for dirpath, dirs, files in os.walk(network_path):
-                    if files == []:
-                        zipf.write(
-                            dirpath, "/".join(dirpath.split("/")[-2:])+"/"
-                        )
-                    for f in files:
-                        fn = os.path.join(dirpath, f)
-                        zipf.write(fn, "/".join(fn.split("/")[3:]))
+            for f in files:
+                fn = os.path.join(dirpath, f)
+                zipf.write(fn, "/".join(fn.split("/")[3:]))
+
+    def save_network(self, filepath, zipf):
+        if self.use_crf:
+            self.model.save(filepath[:-5], save_format="tf")
+            self.save_crf(filepath[:-5], zipf)
+        else:
+            self.model.save(filepath)
+            zipf.write(filepath, filepath.split("/")[-1])
+
+    def get_class_param(self, filepath, zipf):
+        class_param = {
+            "label2idx": self.label2idx,
+            "word2idx": self.word2idx,
+            "seq_length": self.seq_length,
+            "word_length": self.word_length,
+            "idx2label": self.idx2label,
+            "use_crf": self.use_crf,
+            "use_cnn": self.use_cnn
+        }
+        if self.use_cnn:
+            class_param["char2idx"] = self.char2idx
+        return class_param
 
     @staticmethod
-    def load(filepath):
+    def init_from_config(class_param):
         """
         Load model from the saved zipfile
         :param filepath: path to model zip file
         :return classifier: Loaded model class
         """
-        with ZipFile(filepath, "r") as zipf:
-            filelist = zipf.filelist
-            model_dir = ""
-            with TemporaryDirectory() as tmp_dir:
-                for fn in filelist:
-                    filename = fn.filename
-                    if filename.endswith("_class.pkl"):
-                        with zipf.open(filename, "r") as pkl:
-                            pickle_content = pkl.read()
-                            class_param = pickle.loads(pickle_content)
-                    elif filename.split("/")[0].endswith("_network"):
-                        model_dir = filename.split("/")[0]
-                        zipf.extract(filename, tmp_dir)
-                model = load_model(
-                    f"{tmp_dir}/{model_dir}",
-                    custom_objects={
-                        "ModelWithCRFLoss": ModelWithCRFLoss
-                    }
-                )
-                model.summary()
-            constructor_param = {
-                "seq_length": class_param["seq_length"],
-                "word_length": class_param["word_length"],
-                "crf": class_param["crf"],
-                "char_embedding": class_param["char_embedding"]
-            }
-            classifier = DLHybridTagger(**constructor_param)
-            classifier.model = model
-            classifier.label2idx = class_param["label2idx"]
-            classifier.word2idx = class_param["word2idx"]
-            classifier.idx2label = class_param["idx2label"]
-            classifier.n_label = len(classifier.label2idx)
-            if "char2idx" in class_param:
-                classifier.char2idx = class_param["char2idx"]
+        constructor_param = {
+            "seq_length": class_param["seq_length"],
+            "word_length": class_param["word_length"],
+            "crf": class_param["crf"],
+            "char_embedding": class_param["char_embedding"]
+        }
+        classifier = DLHybridTagger(**constructor_param)
+        classifier.label2idx = class_param["label2idx"]
+        classifier.word2idx = class_param["word2idx"]
+        classifier.idx2label = class_param["idx2label"]
+        classifier.n_label = len(classifier.label2idx)
+        if "char2idx" in class_param:
+            classifier.char2idx = class_param["char2idx"]
         return classifier
