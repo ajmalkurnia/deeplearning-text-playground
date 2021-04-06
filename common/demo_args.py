@@ -23,8 +23,9 @@ def base_args(parser):
     parser.add_argument(
         "-t", "--task", type=str, help="Tasks", required=True,
         choices={
-            "emotion_id", "news_category_id",
-            "sentiment_en", "news_category_en", "fake_news_en"
+            "emotion_id", "news_category_id", "postag_id", "postag_ud_id",
+            "ner_id", "sentiment_en", "news_category_en", "fake_news_en",
+            "postag_en", "ner_en",
         }
     )
     parser.add_argument(

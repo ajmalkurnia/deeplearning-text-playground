@@ -11,7 +11,7 @@ from common.utils import split_data
 class Dataset():
     def __init__(self, args):
         self.path = args
-        self.arch = args.architecture
+        # self.arch = args.architecture
 
     def get_data(self):
         raise NotImplementedError()
@@ -148,7 +148,7 @@ class IndoSum(Dataset):
 
 class POSTagID(Dataset):
     LANG = "id"
-    TASK = "sequence-classification"
+    TASK = "tagger"
 
     def open_data(self, path):
         data = []
@@ -175,10 +175,13 @@ class POSTagID(Dataset):
         data = split_data((df["tokenized_text"], df["tag"]))
         return data
 
+    def get_sequence_length(self):
+        return 90
+
 
 class POSTagUDID(Dataset):
     LANG = "id"
-    TASK = "sequence-classification"
+    TASK = "tagger"
 
     def __init__(self, args):
         super(POSTagUDID, self).__init__(args)
@@ -217,10 +220,13 @@ class POSTagUDID(Dataset):
                 data[0] = (df["tokenized_text"], df["tag"])
         return data
 
+    def get_sequence_length(self):
+        return 190
+
 
 class NERID(Dataset):
     LANG = "id"
-    TASK = "sequence-classification"
+    TASK = "tagger"
 
     def __init__(self, args):
         super(NERID, self).__init__(args)
@@ -258,6 +264,9 @@ class NERID(Dataset):
             elif "train" in filen:
                 data[0] = (df["tokenized_text"], df["tag"])
         return data
+
+    def get_sequence_length(self):
+        return 75
 
 
 class IMDB(Dataset):
@@ -415,6 +424,9 @@ class NEREN(Dataset):
             elif "train" in filen:
                 data[0] = (df["tokenized_text"], df["tag"])
         return data
+
+    def get_sequence_length(self):
+        return 105
 
 
 DATASET = {
