@@ -9,7 +9,7 @@ from model.base_classifier import BaseClassifier
 class RNNClassifier(BaseClassifier):
     def __init__(
         self, rnn_size=100, dropout=0.5, rnn_type="lstm", attention=None,
-        **kwargs
+        fcn_layers=[(128, 0.1, "relu")], **kwargs
     ):
         """
             :param rnn_size: int, RNN hidden unit
@@ -25,6 +25,7 @@ class RNNClassifier(BaseClassifier):
         self.rnn_type = rnn_type
         self.dropout = dropout
         self.attention = attention
+        self.fcn_layers = fcn_layers
         if self.attention:
             self.return_seq = True
         else:
@@ -41,7 +42,8 @@ class RNNClassifier(BaseClassifier):
             input_dim=self.vocab_size, output_dim=self.embedding_size,
             input_length=self.max_input,
             embeddings_initializer=self.embedding,
-            trainable=self.train_embedding
+            trainable=self.train_embedding,
+            mask_zero=True
         )
         self.model = embedding_layer(input_layer)
 
@@ -73,6 +75,9 @@ class RNNClassifier(BaseClassifier):
 
         # Dropout
         self.model = Dropout(self.dropout)(self.model)
+        for units, do_rate, activation in self.fcn_layers:
+            self.model = Dense(units, activation=activation)(self.model)
+            self.model = Dropout(do_rate)(self.model)
         # Last Layer
         out = Dense(self.n_label, activation="softmax")(self.model)
         self.model = Model(input_layer, out)

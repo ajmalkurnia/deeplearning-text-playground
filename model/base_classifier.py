@@ -9,9 +9,10 @@ from tempfile import TemporaryDirectory
 import numpy as np
 import pickle
 import itertools
+import logging
 
 from common.tokenization import Tokenizer
-from common.word_vector import WordEmbedding
+from common.word_vector import WE_TYPE
 from model.AttentionText.attention_text import Attention
 from model.TransformerText.transformer_block import (
     TransformerBlock, TransformerEmbedding, MultiAttention
@@ -79,6 +80,7 @@ class BaseClassifier():
                 raise ValueError(
                     "Provide the embedding_type of the embedding file [w2v|ft]"
                 )
+        self.logger = logging.getLogger(__name__)
 
     def init_model(self):
         raise NotImplementedError()
@@ -97,8 +99,7 @@ class BaseClassifier():
         Initialization of for Word embedding matrix
         UNK word will be initialized randomly
         """
-        wv_model = WordEmbedding(self.embedding_type)
-        wv_model.load_model(self.embedding_file)
+        wv_model = WE_TYPE[self.embedding_type].load_model(self.embedding_file)
         self.embedding_size = wv_model.size
 
         self.embedding = np.zeros(
@@ -127,7 +128,7 @@ class BaseClassifier():
         special_token = self.add_special_token()
         tokenizer = Tokenizer(self.vocab_size)
         for idx, token in enumerate(special_token):
-            tokenizer.vocab_index[token] = idx
+            tokenizer.vocab_index[token] = idx + 1
         tokenizer.build_vocab(tokenized_corpus)
         self.vocab = tokenizer.vocab_index
         if len(self.vocab) < self.vocab_size:
@@ -146,7 +147,7 @@ class BaseClassifier():
         for text in corpus:
             idx_list = []
             for idx, token in enumerate(text):
-                idx_list.append(self.vocab.get(token, 0))
+                idx_list.append(self.vocab.get(token, 1))
             v_input.append(idx_list)
         return pad_sequences(v_input, self.max_input, padding='post')
 
@@ -166,7 +167,9 @@ class BaseClassifier():
         :param label_data: list of string, target label of the dataset
         :return list of int: indexes of the label
         """
-        return to_categorical([self.label2idx[label] for label in label_data])
+        return to_categorical(
+            [self.label2idx[label] for label in label_data], self.n_label
+        )
 
     def get_label(self, pred_data):
         """
@@ -187,7 +190,7 @@ class BaseClassifier():
         X_feature = self.vectorized_input(X)
         X_feature = np.array(X_feature, dtype="float32", copy=False)
         y_vector = None
-        if y:
+        if y is not None:
             y_vector = self.vectorized_label(y)
         return X_feature, y_vector
 
@@ -210,7 +213,7 @@ class BaseClassifier():
             )
             es = EarlyStopping(
                 monitor='val_accuracy', mode='max', verbose=1,
-                patience=int(epoch/2), restore_best_weights=True
+                patience=int(epoch/5), restore_best_weights=True
             )
             callbacks_list = [es]
             if ckpoint_file:
@@ -255,13 +258,18 @@ class BaseClassifier():
         :param validation_pair: tupple (val_X, and val_y), validation split
         :param ckpoint_file: string, path to checkpoint
         """
+        self.logger.info("Initialized Vocabulary")
         if self.vocab is None:
             self.__init_w2i(X)
+        self.logger.info("Initialized embeddings")
         self.__init_embedding()
+        self.logger.info("Initialized Label vectors")
         if self.label2idx is None:
             self.__init_l2i(y)
+        self.logger.info("Initialized model")
         if self.model is None:
             self.init_model()
+        self.logger.info("Run training process")
         self.__train(X, y, epoch, batch_size, validation_pair, ckpoint_file)
 
     def test(self, X):
@@ -272,6 +280,7 @@ class BaseClassifier():
         """
         result = []
         X_test, _ = self.__prepare_data(X)
+        self.logger.info("Predicting...")
         y_pred = self.model.predict(X_test)
         result = self.get_label(y_pred)
         return result
@@ -302,7 +311,6 @@ class BaseClassifier():
     @classmethod
     def load(cls, filepath):
         """
-        TODO: static load method
         Load model from the saved zipfile
         :param filepath: path to model zip file
         """

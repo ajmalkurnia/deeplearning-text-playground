@@ -17,13 +17,24 @@ def get_args():
 
 def base_args(parser):
     parser.add_argument(
-        "-d", "--datapath", type=str, help="Path to input data", required=True
+        "-d", "--datapath", type=str, help="Path to data directory",
+        required=True
+    )
+    parser.add_argument(
+        "-t", "--task", type=str, help="Tasks", required=True,
+        choices={
+            "emotion_id", "news_category_id",
+            "sentiment_en", "news_category_en", "fake_news_en"
+        }
     )
     parser.add_argument(
         "-s", "--savemodel", type=str, help="Path to save model"
     )
     parser.add_argument(
         "-l", "--loadmodel", type=str, help="Path to load model"
+    )
+    parser.add_argument(
+        "--logfile", type=str, help="Log file"
     )
     return parser
 
@@ -64,7 +75,7 @@ def rnn_args(subparser):
         "-u", "--unitrnn", type=int, help="RNN unit size", default=100
     )
     rnn_parser.add_argument(
-        "-t", "--typernn", type=str, help="Type of RNN layer",
+        "--typernn", type=str, help="Type of RNN layer",
         choices={"lstm", "gru"}, default="lstm"
     )
     rnn_parser.add_argument(
@@ -79,7 +90,7 @@ def rnn_args(subparser):
 def cnn_args(subparser):
     cnn_parser = subparser.add_parser("cnn", help="Run CNN model")
     cnn_parser.add_argument(
-        "-t", "--convtype", type=str, choices={"parallel", "sequence"},
+        "--convtype", type=str, choices={"parallel", "sequential"},
         help="Convolution process type", default="sequence"
     )
     return subparser
@@ -120,7 +131,7 @@ def han_args(subparser):
         "-u", "--unitrnn", type=int, help="RNN unit size", default=100
     )
     han_parser.add_argument(
-        "-t", "--typernn", type=str, help="Type of RNN layer",
+        "--typernn", type=str, help="Type of RNN layer",
         choices={"lstm", "gru"}, default="lstm"
     )
     han_parser.add_argument(
@@ -137,7 +148,7 @@ def rcnn_args(subparser):
         "-u", "--unitrnn", type=int, help="RNN unit size", default=100
     )
     rcnn_parser.add_argument(
-        "-t", "--typernn", type=str, help="Type of RNN layer",
+        "--typernn", type=str, help="Type of RNN layer",
         choices={"lstm", "gru"}, default="lstm"
     )
     rcnn_parser.add_argument(

@@ -1,5 +1,5 @@
 from keras.layers import Layer, Activation, Dot, Dense
-from keras.layers import RepeatVector, Flatten, Lambda
+from keras.layers import RepeatVector, Lambda
 from keras import backend as K
 import tensorflow as tf
 import numpy as np
@@ -59,16 +59,16 @@ class Attention(Layer):
             self.maxlen = input_shape[1]
 
         if self.score in ["general", "location"]:
-            self.W1 = Dense(self.feature, name="key_att")
+            self.W1 = Dense(self.feature, name="key_att", use_bias=False)
         elif self.score == "add":
-            self.W1 = Dense(self.feature, name="key_att")
-            self.W2 = Dense(self.feature, name="query_att")
+            self.W1 = Dense(self.feature, name="key_att", use_bias=False)
+            self.W2 = Dense(self.feature, name="query_att", use_bias=False)
             self.V = Dense(1)
         elif self.score == "self":
-            self.W1 = Dense(self.feature, activation="tanh")
-            self.W2 = Dense(self.feature, name="sf_W")
+            self.W1 = Dense(self.feature, activation="tanh", use_bias=False)
+            self.W2 = Dense(self.feature, name="sf_W", use_bias=False)
         elif self.score == "hierarchy":
-            self.W1 = Dense((self.feature), activation="tanh")
+            self.W1 = Dense((self.feature), activation="tanh", use_bias=False)
 
         super(Attention, self).build(input_shape)
 
@@ -112,7 +112,7 @@ class Attention(Layer):
         # actual loss = penalty_factor * ||A.At-I||
         self.add_loss(self.penalty * frobenius_norm)
 
-    def call(self, inputs):
+    def call(self, inputs, mask=None):
         """
         Run attention mechanism
         :param inputs: a list [query, key]/tensor query,
@@ -131,15 +131,22 @@ class Attention(Layer):
         """
         if isinstance(inputs, list):
             query, key = inputs
+            mask = mask[0]
         else:
             query, key = inputs, None
 
         if key is not None:
             key = tf.expand_dims(key, 1)
-        # 'self' scoring will return (batch, seq, hid)
-        # others will return (bacth, seq, 1)
-        score = self.score_function(query, key)
 
+        if mask is not None:
+            casted_mask = tf.expand_dims(tf.cast(mask, "float32"), -1)
+            query *= casted_mask
+            # 'self' scoring will return (batch, seq, hid)
+            # others will return (bacth, seq, 1)
+            score = self.score_function(query, key)
+            score *= casted_mask
+        else:
+            score = self.score_function(query, key)
         # normalized attention score
         attention_weights = Activation("softmax")(score)
 
@@ -149,9 +156,7 @@ class Attention(Layer):
         if self.score == "self":
             # Add loss for penalization
             self._compute_additional_loss((attention_weights))
-            context_vector = Flatten()(attention_matrix)
-        else:
-            context_vector = Lambda(
+        context_vector = Lambda(
                 lambda x: K.sum(x, axis=1)
             )(attention_matrix)
 

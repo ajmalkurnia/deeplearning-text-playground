@@ -4,7 +4,7 @@ import sklearn_crfsuite
 import pickle
 import os
 from collections import defaultdict
-from nltk.tokenize import word_tokenize, casual_tokenize
+from nltk.tokenize import word_tokenize, casual_tokenize, sent_tokenize
 from zipfile import ZipFile
 from sklearn import model_selection
 from sklearn_crfsuite import metrics
@@ -78,8 +78,10 @@ class Tokenizer():
         return counter
 
 
-class NLTKToknizerWrapper(Tokenizer):
-    def __init__(self, formal=True, vocab_size=0, unk_token=True):
+class NLTKTokenizerWrapper(Tokenizer):
+    def __init__(
+        self, formal=True, sentence_level=False, vocab_size=0, unk_token=True
+    ):
         """
         :param formal: bool, if True the tokenization process uses nltk's
             word_tokenize function, else it will use casual_tokenize function
@@ -89,7 +91,9 @@ class NLTKToknizerWrapper(Tokenizer):
             result only used if build_vocab function has been used
         """
         super().__init__(vocab_size, unk_token)
-        if formal:
+        if sentence_level:
+            self.tokenize_func = sent_tokenize
+        elif formal:
             self.tokenize_func = word_tokenize
         else:
             self.tokenize_func = casual_tokenize
@@ -100,7 +104,7 @@ class NLTKToknizerWrapper(Tokenizer):
         return tokens
 
 
-class CRFtokenizer:
+class CRFTokenizer:
     def __init__(self, window=5, vocab_size=0, unk_token=True, **kwargs):
         """
         :param window: the size of context window,
@@ -291,3 +295,23 @@ class CRFtokenizer:
                         class_param = pickle.load(pkl)
                         self.window = class_param["window"]
                         self.verbose_ortho = class_param["verbose_ortho"]
+
+
+def tokenize(corpus, method="nltk_casual", case_fold=True, crf_file=""):
+    if method == "nltk_casual":
+        tokenizer = NLTKTokenizerWrapper(False)
+    elif method == "nltk_formal":
+        tokenizer = NLTKTokenizerWrapper(True)
+    elif method == "nltk_sentence":
+        tokenizer = NLTKTokenizerWrapper(None, True)
+    elif method == "crf":
+        tokenizer = CRFTokenizer()
+        tokenizer.load_model(crf_file)
+    elif method == "char":
+        return [[*doc] for doc in corpus]
+
+    return corpus.apply(
+        lambda t: tokenizer.tokenize(
+            t.lower() if case_fold else t
+            )
+        )
