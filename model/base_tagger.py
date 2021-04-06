@@ -11,7 +11,6 @@ from collections import defaultdict
 from zipfile import ZipFile
 import numpy as np
 import pickle
-import string
 
 from .extras.crf_subclass_model import ModelWithCRFLoss
 
@@ -25,47 +24,20 @@ class BaseTagger():
     ):
         """
         Deep learning based sequence tagger.
-        Consist of:
-            - Char embedding (CNN Optional)
-            - RNN
-            - CRF (Optional)
-
         :param seq_length: int, maximum sequence length in a data
-        :param word_length: int, maximum character length in a token,
-            relevant when char_embedding is not None
-        :param char_embed_size: int, the size of character level embedding,
-            relevant when char_embedding is not None
         :param word_embed_size: int, the size of word level embedding,
             relevant when not using pretrained embedding file
         :param embedding_file: string, path to pretrained word embedding
         :param embedding_type: string, word embedding types:
             random, supply any keras initilaizer string
             pretrained, word embedding type of the embedding_file,
-                available option: "w2v", "ft", "glove"
-        :param recurrent_dropout: float, dropout rate inside RNN
-        :param embedding_dropout: float, dropout rate after embedding layer
-        :param rnn_units: int, the number of rnn units
+                available option: "w2v", "ft", "glove", "onehot", "custom"
+        :param vocabulary: dict, inverse index of vocabulary
+        :param vocab_size: int, the size of vobulary for the embedding
         :param optimizer: string/object, any valid optimizer parameter
             during model compilation
         :param loss: string/object, any valid loss parameter
             during model compilation
-        :param vocab_size: int, the size of vobulary for the embedding
-        :param pre_outlayer_dropout: float, dropout rate before output layer
-        :param char_embedding: string/none, the type of character embedding
-            valid option:
-            - "cnn" to use cnn based character embedding
-            - None to not use any character embedding
-        :param crf: bool, using CRF as output layer,
-            if false time distributed softmax layer will be used
-        :param conv_layers: list of list, convolution layer settings,
-            relevant when using cnn char embedding
-            each list component consist of 3 length tuple/list that denotes:
-                int, number of filter,
-                int, filter size,
-                int, maxpool size (use -1 to not use maxpooling)
-            each convolution layer is connected directly to embedding layer,
-            character information will be obtained by applying concatenation
-                and GlobalMaxPooling
         """
 
         self.seq_length = seq_length
@@ -78,21 +50,17 @@ class BaseTagger():
             raise ValueError(
                 "Supply parameter embedding_file when using w2v/ft/glove embedding"  # noqa
             )
-        if embedding_matrix:
+        self.word2idx = vocabulary
+        if vocabulary:
+            self.n_words = len(vocabulary)
+        if embedding_matrix and vocabulary:
             self.embedding = embedding_matrix
+        else:
+            raise ValueError("Supply the vocab of embedding matrix")
         self.loss = loss
 
         self.optimizer = optimizer
         self.vocab_size = vocab_size
-
-    def init_c2i(self):
-        """
-        Initialize character to index
-        """
-        vocab = set([*string.printable])
-        self.char2idx = {ch: i+1 for i, ch in enumerate(vocab)}
-        self.char2idx["UNK"] = len(self.char2idx)+1
-        self.n_chars = len(self.char2idx)+1
 
     def init_w2i(self, data):
         """
@@ -243,9 +211,11 @@ class BaseTagger():
 
     def init_training(self, X, y):
         self.init_l2i(y)
-        self.init_w2i(X)
+        if self.word2idx:
+            self.init_w2i(X)
+
         self.init_embedding()
-        self.init_model(y)
+        self.init_model()
 
     def train(self, X, y, n_epoch=10, valid_split=None, batch_size=128):
         """

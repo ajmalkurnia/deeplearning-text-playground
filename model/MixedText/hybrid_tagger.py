@@ -30,33 +30,16 @@ class DLHybridTagger(BaseTagger):
             - RNN
             - CRF (Optional)
 
-        :param seq_length: int, maximum sequence length in a data
         :param word_length: int, maximum character length in a token,
-            relevant when char_embedding is not None
+            relevant when using cnn
         :param char_embed_size: int, the size of character level embedding,
-            relevant when char_embedding is not None
-        :param word_embed_size: int, the size of word level embedding,
-            relevant when not using pretrained embedding file
-        :param word_embed_file: string, path to pretrained word embedding
-        :param we_type: string, word embedding types:
-            random, supply any keras initilaizer string
-            pretrained, word embedding type of the word_embed_file,
-                available option: "w2v", "ft", "glove"
+            relevant when using cnn
         :param recurrent_dropout: float, dropout rate inside RNN
         :param embedding_dropout: float, dropout rate after embedding layer
         :param rnn_units: int, the number of rnn units
-        :param optimizer: string/object, any valid optimizer parameter
-            during model compilation
-        :param loss: string/object, any valid loss parameter
-            during model compilation
-        :param vocab_size: int, the size of vobulary for the embedding
         :param pre_outlayer_dropout: float, dropout rate before output layer
-        :param char_embedding: string/none, the type of character embedding
-            valid option:
-            - "cnn" to use cnn based character embedding
-            - None to not use any character embedding
-        :param crf: bool, using CRF as output layer,
-            if false time distributed softmax layer will be used
+        :param use_cnn: bool, whether to use cnn as character embedding
+        :param crf: bool, whether to use crf or softmax
         :param conv_layers: list of list, convolution layer settings,
             relevant when using cnn char embedding
             each list component consist of 3 length tuple/list that denotes:
@@ -155,7 +138,7 @@ class DLHybridTagger(BaseTagger):
         if self.crf:
             crf = CRF(
                 self.n_label+1,
-                chain_initializer=Constant(self.__compute_transition_matrix(y))
+                chain_initializer=Constant(self.transition_matrix)
             )
             out = crf(self.model)
             self.model = Model(inputs=input_layer, outputs=out)
@@ -335,8 +318,8 @@ class DLHybridTagger(BaseTagger):
         constructor_param = {
             "seq_length": class_param["seq_length"],
             "word_length": class_param["word_length"],
-            "crf": class_param["crf"],
-            "char_embedding": class_param["char_embedding"]
+            "use_crf": class_param["use_crf"],
+            "use_cnn": class_param["use_cnn"]
         }
         classifier = DLHybridTagger(**constructor_param)
         classifier.label2idx = class_param["label2idx"]
