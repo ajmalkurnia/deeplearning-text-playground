@@ -156,3 +156,28 @@ def rcnn_args(subparser):
         default=128
     )
     return subparser
+
+
+def cnn_rnn_crf_args(subparser):
+    cnn_rnn_crf_parser = subparser.add_parser(
+        "cnn-rnn-crf", help="Run CNN-RNN-CRF Model"
+    )
+    cnn_rnn_crf_parser.add_argument(
+        "-u", "--unitrnn", type=int, help="RNN unit size", default=100
+    )
+    cnn_rnn_crf_parser.add_argument(
+        "--charembedsize", type=int, help="Character embedding size",
+        default=30
+    )
+    cnn_rnn_crf_parser.add_argument(
+        "--recurrentdropout", type=float, help="Dropout rate inside RNN",
+        default=0.5
+    )
+    cnn_rnn_crf_parser.add_argument(
+        "--embeddingdropout", type=float, help="Dropout rate after embedding",
+        default=0.5
+    )
+    cnn_rnn_crf_parser.add_argument(
+        "--preoutputdropout", type=float, help="Dropout rate before output",
+        default=0.5
+    )

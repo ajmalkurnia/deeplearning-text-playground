@@ -30,7 +30,12 @@ def main(args, data):
             "we_type": args.embeddingtype,
             "seq_length": data.get_sequence_length(),
             "use_crf": True,
-            "use_cnn": True
+            "use_cnn": True,
+            "unit_rnn": args.unitrnn,
+            "char_embed_size": args.charembedsize,
+            "recurrent_dropout": args.recurrentdropout,
+            "embedding_dropout": args.embeddingdropout,
+            "preoutput_dropout": args.preoutputdropout
         }
 
         hybrid_tagger = DLHybridTagger(**class_parameter)
