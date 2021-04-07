@@ -12,7 +12,10 @@ def get_args():
     subparser = transformer_args(subparser)
     subparser = han_args(subparser)
     subparser = rcnn_args(subparser)
-    subparser = cnn_rnn_crf_args(subparser)
+    subparser = hybrid_tagger_args(subparser)
+    subparser = hybrid_tagger_args(subparser, "cnn-rnn")
+    subparser = hybrid_tagger_args(subparser, "rnn-crf")
+    subparser = hybrid_tagger_args(subparser, "rnn-s")
     return parser
 
 
@@ -160,26 +163,27 @@ def rcnn_args(subparser):
     return subparser
 
 
-def cnn_rnn_crf_args(subparser):
-    cnn_rnn_crf_parser = subparser.add_parser(
-        "cnn-rnn-crf", help="Run CNN-RNN-CRF Model"
+def hybrid_tagger_args(subparser, name="cnn-rnn-crf"):
+    hybrid_tag_parser = subparser.add_parser(
+        name, help=f"Run {name.upper()} Model"
     )
-    cnn_rnn_crf_parser.add_argument(
+    hybrid_tag_parser.add_argument(
         "-u", "--unitrnn", type=int, help="RNN unit size", default=100
     )
-    cnn_rnn_crf_parser.add_argument(
+    hybrid_tag_parser.add_argument(
         "--charembedsize", type=int, help="Character embedding size",
         default=30
     )
-    cnn_rnn_crf_parser.add_argument(
+    hybrid_tag_parser.add_argument(
         "--recurrentdropout", type=float, help="Dropout rate inside RNN",
         default=0.5
     )
-    cnn_rnn_crf_parser.add_argument(
+    hybrid_tag_parser.add_argument(
         "--embeddingdropout", type=float, help="Dropout rate after embedding",
         default=0.5
     )
-    cnn_rnn_crf_parser.add_argument(
+    hybrid_tag_parser.add_argument(
         "--preoutputdropout", type=float, help="Dropout rate before output",
         default=0.5
     )
+    return subparser
