@@ -51,9 +51,9 @@ class ModelWithCRFLoss(tf.keras.Model):
         self.optimizer.apply_gradients(
             zip(gradients, self.trainable_variables))
 
-        return {"crf_loss": crf_loss, "internal_losses": internal_losses}
+        return {"loss": crf_loss, "internal_losses": internal_losses}
 
     def test_step(self, data):
         x, y, sample_weight = unpack_data(data)
         crf_loss, internal_losses = self.compute_loss(x, y, sample_weight)
-        return {"crf_loss": crf_loss, "internal_losses": internal_losses}
+        return {"loss": crf_loss, "internal_losses": internal_losses}

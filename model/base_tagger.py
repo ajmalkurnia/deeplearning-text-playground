@@ -235,7 +235,7 @@ class BaseTagger():
         if valid_split:
             valid_split = self.prepare_data(valid_split[0], valid_split[1])
             es = EarlyStopping(
-                monitor="val_crf_loss" if self.use_crf else "val_loss",
+                monitor="val_loss",
                 patience=10,
                 verbose=1,
                 mode="min",
