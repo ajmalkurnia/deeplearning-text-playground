@@ -20,7 +20,7 @@ class BaseTagger():
         self, seq_length=100, embedding_size=100, embedding_file=None,
         embedding_matrix=None, embedding_type="glorot_normal",
         vocabulary=None, vocab_size=10000,
-        optimizer="adam", loss="categorical_entropy",
+        optimizer="adam", loss="categorical_crossentropy",
     ):
         """
         Deep learning based sequence tagger.
@@ -55,8 +55,9 @@ class BaseTagger():
             self.n_words = len(vocabulary)
         if embedding_matrix and vocabulary:
             self.embedding = embedding_matrix
-        else:
+        elif embedding_matrix:
             raise ValueError("Supply the vocab of embedding matrix")
+
         self.loss = loss
 
         self.optimizer = optimizer
@@ -95,11 +96,11 @@ class BaseTagger():
         wv_model = WE_TYPE[self.embedding_type].load_model(self.embedding_file)
         self.word_embed_size = wv_model.size
 
-        self.word_embedding = np.zeros(
+        self.embedding = np.zeros(
             (self.vocab_size+1, wv_model.size), dtype=float
         )
         for word, idx in self.word2idx.items():
-            self.word_embedding[idx, :] = wv_model.retrieve_vector(word)
+            self.embedding[idx, :] = wv_model.retrieve_vector(word)
 
     def init_onehot_embedding(self):
         """
@@ -211,7 +212,7 @@ class BaseTagger():
 
     def init_training(self, X, y):
         self.init_l2i(y)
-        if self.word2idx:
+        if self.word2idx is None:
             self.init_w2i(X)
 
         self.init_embedding()
@@ -234,7 +235,7 @@ class BaseTagger():
         if valid_split:
             valid_split = self.prepare_data(valid_split[0], valid_split[1])
             es = EarlyStopping(
-                monitor="val_crf_loss" if self.crf else "val_loss",
+                monitor="val_crf_loss" if self.use_crf else "val_loss",
                 patience=10,
                 verbose=1,
                 mode="min",

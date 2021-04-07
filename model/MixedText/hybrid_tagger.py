@@ -7,7 +7,7 @@ from keras.preprocessing.sequence import pad_sequences
 from keras.models import Model, Input
 from tensorflow_addons.layers.crf import CRF
 
-from .tf_model_crf import ModelWithCRFLoss
+from model.extras.crf_subclass_model import ModelWithCRFLoss
 
 import numpy as np
 import string
@@ -50,7 +50,7 @@ class DLHybridTagger(BaseTagger):
             character information will be obtained by applying concatenation
                 and GlobalMaxPooling
         """
-        super(DLHybridTagger, self).init__(**kwargs)
+        super(DLHybridTagger, self).__init__(**kwargs)
         self.word_length = word_length
         self.char_embed_size = char_embed_size
 
@@ -63,10 +63,8 @@ class DLHybridTagger(BaseTagger):
         self.use_cnn = use_cnn
         self.conv_layers = conv_layers
 
-        if self.loss is None and self.crf:
+        if self.use_crf:
             self.loss = "sparse_categorical_crossentropy"
-        elif self.loss is None:
-            self.loss = "categorical_crossentropy"
 
     def __get_char_embedding(self):
         """
@@ -106,7 +104,7 @@ class DLHybridTagger(BaseTagger):
         embedding_block = TimeDistributed(embedding_block)(seq_inp_layer)
         return seq_inp_layer, embedding_block
 
-    def init_model(self, y):
+    def init_model(self):
         """
         Initialize the network model
         """
@@ -115,7 +113,7 @@ class DLHybridTagger(BaseTagger):
         word_embed_block = Embedding(
             self.vocab_size+1, self.word_embed_size,
             input_length=self.seq_length,
-            embeddings_initializer=self.word_embedding,
+            embeddings_initializer=self.embedding,
             mask_zero=True,
         )
         word_embed_block = word_embed_block(input_word_layer)
@@ -135,7 +133,7 @@ class DLHybridTagger(BaseTagger):
             dropout=self.rd,
         ))(embed_block)
         self.model = Dropout(self.pre_outlayer_dropout)(self.model)
-        if self.crf:
+        if self.use_crf:
             crf = CRF(
                 self.n_label+1,
                 chain_initializer=Constant(self.transition_matrix)
@@ -229,7 +227,7 @@ class DLHybridTagger(BaseTagger):
         out_seq = pad_sequences(
             maxlen=self.seq_length, sequences=out_seq, padding="post"
         )
-        if not self.crf:
+        if not self.use_crf:
             # the label for Dense output layer needed to be onehot encoded
             out_seq = [
                 to_categorical(i, num_classes=self.n_label+1) for i in out_seq
@@ -264,17 +262,22 @@ class DLHybridTagger(BaseTagger):
         :param input_data: list of list of string, tokenized input corpus
         :return label_seq: list of list of string, readable label sequence
         """
-        if self.crf:
+        if self.use_crf:
             return self.get_crf_label(pred_sequence, input_data)
         else:
             return self.get_greedy_label(pred_sequence, input_data)
 
     def init_training(self, X, y):
-        super().prepare_training(X, y)
+        self.init_l2i(y)
+        if self.word2idx is None:
+            self.init_w2i(X)
+        self.init_embedding()
         if self.use_crf:
             self.__init_transition_matrix(y)
         if self.use_cnn:
             self.init_c2i()
+
+        self.init_model()
 
     def save_crf(self, filepath, zipf):
         for dirpath, dirs, files in os.walk(filepath):

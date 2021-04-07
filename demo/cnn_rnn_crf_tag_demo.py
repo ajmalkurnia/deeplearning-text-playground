@@ -26,16 +26,16 @@ def main(args, data):
     else:
         logging.info("DL Hybrid tagger Training")
         class_parameter = {
-            "word_embed_file": args.embeddingfile,
-            "we_type": args.embeddingtype,
+            "embedding_file": args.embeddingfile,
+            "embedding_type": args.embeddingtype,
             "seq_length": data.get_sequence_length(),
             "use_crf": True,
             "use_cnn": True,
-            "unit_rnn": args.unitrnn,
+            "rnn_units": args.unitrnn,
             "char_embed_size": args.charembedsize,
             "recurrent_dropout": args.recurrentdropout,
             "embedding_dropout": args.embeddingdropout,
-            "preoutput_dropout": args.preoutputdropout
+            "pre_outlayer_dropout": args.preoutputdropout
         }
 
         hybrid_tagger = DLHybridTagger(**class_parameter)

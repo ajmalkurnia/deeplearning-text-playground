@@ -12,6 +12,7 @@ def get_args():
     subparser = transformer_args(subparser)
     subparser = han_args(subparser)
     subparser = rcnn_args(subparser)
+    subparser = cnn_rnn_crf_args(subparser)
     return parser
 
 

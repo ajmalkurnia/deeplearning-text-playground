@@ -49,7 +49,7 @@ def main(args):
     try:
         demo = DEMOS[f"{args.architecture}-{data.TASK}"]
     except KeyError:
-        raise KeyError("Invalid sub-command")
+        raise KeyError("Invalid architecture or the dataset is not compatible with this architecture")  # noqa
 
     demo.main(args, data)
 

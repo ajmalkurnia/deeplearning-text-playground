@@ -10,8 +10,8 @@ from common.utils import split_data
 
 class Dataset():
     def __init__(self, args):
-        self.path = args
-        # self.arch = args.architecture
+        self.path = args.datapath
+        self.arch = args.architecture
 
     def get_data(self):
         raise NotImplementedError()
@@ -167,12 +167,15 @@ class POSTagID(Dataset):
                     "tokenized_text": token_sequence,
                     "tag": tag_sequenece
                 })
-        return pd.DataFrame(data)
+        return data
 
     def get_data(self):
         path = f"{self.path}/Indonesian_Manually_Tagged_Corpus_ID.tsv"
         df = self.open_data(path)
-        data = split_data((df["tokenized_text"], df["tag"]))
+        X = [row["tokenized_text"] for row in df]
+        y = [row["tag"] for row in df]
+
+        data = split_data((X, y))
         return data
 
     def get_sequence_length(self):
@@ -205,19 +208,21 @@ class POSTagUDID(Dataset):
                     })
                     token_sequence = []
                     tag_sequence = []
-        return pd.DataFrame(data)
+        return data
 
     def get_data(self):
         files = glob(f"{self.path}/*.conllu")
         data = [None] * 3
         for filen in files:
             df = self.open_data(filen)
+            X = [row["tokenized_text"] for row in df]
+            y = [row["tag"] for row in df]
             if "dev" in filen:
-                data[2] = (df["tokenized_text"], df["tag"])
+                data[2] = (X, y)
             elif "test" in filen:
-                data[1] = (df["tokenized_text"], df["tag"])
+                data[1] = (X, y)
             elif "train" in filen:
-                data[0] = (df["tokenized_text"], df["tag"])
+                data[0] = (X, y)
         return data
 
     def get_sequence_length(self):
@@ -250,19 +255,21 @@ class NERID(Dataset):
                     })
                     token_sequence = []
                     tag_sequence = []
-        return pd.DataFrame(data)
+        return data
 
     def get_data(self):
         files = glob(f"{self.path}/*.txt")
         data = [None] * 3
         for filen in files:
             df = self.open_data(filen)
+            X = [row["tokenized_text"] for row in df]
+            y = [row["tag"] for row in df]
             if "dev" in filen:
-                data[2] = (df["tokenized_text"], df["tag"])
+                data[2] = (X, y)
             elif "test" in filen:
-                data[1] = (df["tokenized_text"], df["tag"])
+                data[1] = (X, y)
             elif "train" in filen:
-                data[0] = (df["tokenized_text"], df["tag"])
+                data[0] = (X, y)
         return data
 
     def get_sequence_length(self):
@@ -387,7 +394,7 @@ class LIAR(Dataset):
 
 class NEREN(Dataset):
     LANG = "en"
-    TASK = "sequence-labelling"
+    TASK = "tagger"
 
     def __init__(self, args):
         super(NEREN, self).__init__(args)
@@ -410,19 +417,21 @@ class NEREN(Dataset):
                     })
                     token_sequence = []
                     tag_sequenece = []
-        return pd.DataFrame(data)
+        return data
 
     def get_data(self):
         files = glob(f"{self.path}/*.conll")
         data = [None] * 3
         for filen in files:
             df = self.open_data(filen)
+            X = [row["tokenized_text"] for row in df]
+            y = [row["tag"] for row in df]
             if "dev" in filen:
-                data[2] = (df["tokenized_text"], df["tag"])
+                data[2] = (X, y)
             elif "test" in filen:
-                data[1] = (df["tokenized_text"], df["tag"])
+                data[1] = (X, y)
             elif "train" in filen:
-                data[0] = (df["tokenized_text"], df["tag"])
+                data[0] = (X, y)
         return data
 
     def get_sequence_length(self):
