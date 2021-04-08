@@ -15,7 +15,8 @@ def get_args():
     subparser = hybrid_tagger_args(subparser)
     subparser = hybrid_tagger_args(subparser, "cnn-rnn")
     subparser = hybrid_tagger_args(subparser, "rnn-crf")
-    subparser = hybrid_tagger_args(subparser, "rnn-s")
+    subparser = hybrid_tagger_args(subparser, "rnn-seq")
+    subparser = cnn_tagger_args(subparser)
     return parser
 
 
@@ -177,6 +178,21 @@ def hybrid_tagger_args(subparser, name="cnn-rnn-crf"):
     hybrid_tag_parser.add_argument(
         "--recurrentdropout", type=float, help="Dropout rate inside RNN",
         default=0.5
+    )
+    hybrid_tag_parser.add_argument(
+        "--embeddingdropout", type=float, help="Dropout rate after embedding",
+        default=0.5
+    )
+    hybrid_tag_parser.add_argument(
+        "--preoutputdropout", type=float, help="Dropout rate before output",
+        default=0.5
+    )
+    return subparser
+
+
+def cnn_tagger_args(subparser):
+    hybrid_tag_parser = subparser.add_parser(
+        "cnn-seq", help="Run CNN Model"
     )
     hybrid_tag_parser.add_argument(
         "--embeddingdropout", type=float, help="Dropout rate after embedding",
