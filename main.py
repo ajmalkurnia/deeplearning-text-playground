@@ -4,7 +4,7 @@ from common.data import DATASET
 from demo.classification import rnn_classify_demo, cnn_classify_demo
 from demo.classification import transformer_classify_demo, han_classify_demo
 from demo.classification import rcnn_classify_demo
-from demo.tagger import hybrid_tag_demo, cnn_tag_demo
+from demo.tagger import hybrid_tag_demo, cnn_tag_demo, idcnn_tag_demo
 
 DEMOS = {
     "rnn-classification": rnn_classify_demo,
@@ -16,7 +16,8 @@ DEMOS = {
     "rnn-crf-tagger": hybrid_tag_demo,
     "cnn-rnn-tagger": hybrid_tag_demo,
     "cnn-rnn-crf-tagger": hybrid_tag_demo,
-    "cnn-seq-tagger": cnn_tag_demo
+    "cnn-seq-tagger": cnn_tag_demo,
+    "idcnn-tagger": idcnn_tag_demo
 }
 
 

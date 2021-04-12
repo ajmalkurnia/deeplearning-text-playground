@@ -1,4 +1,4 @@
-from model.CNNText.cnn_tagger import CNNTagger
+from model.CNNText.idcnn_tagger import IDCNNTagger
 from sklearn.metrics import classification_report
 from keras.optimizers import Adam
 import logging
@@ -24,19 +24,20 @@ def main(args, data):
     # general and corpus specific
     if args.loadmodel:
         logging.info("Load model")
-        hybrid_tagger = CNNTagger.load(args.loadmodel)
+        hybrid_tagger = IDCNNTagger.load(args.loadmodel)
     else:
-        logging.info("CNN tagger Training")
+        logging.info("IDCNN-CRF tagger Training")
         class_parameter = {
             "embedding_file": args.embeddingfile,
             "embedding_type": args.embeddingtype,
             "seq_length": data.get_sequence_length(),
             "embedding_dropout": args.embeddingdropout,
-            "pre_outlayer_dropout": args.preoutputdropout,
-            "optimizer": Adam(lr=0.0001)
+            "block_out_dropout": args.blockdropout,
+            "repeat": args.repeat,
+            "optimizer": Adam(lr=0.001)
         }
 
-        hybrid_tagger = CNNTagger(**class_parameter)
+        hybrid_tagger = IDCNNTagger(**class_parameter)
         hybrid_tagger.train(
             train[0], train[1], args.epoch, valid
         )
