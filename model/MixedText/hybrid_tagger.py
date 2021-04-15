@@ -1,6 +1,6 @@
 from keras.layers import LSTM, Embedding, TimeDistributed, Concatenate
 from keras.layers import Dropout, Bidirectional, Conv1D, MaxPooling1D
-from keras.layers import GlobalMaxPool1D, Dense
+from keras.layers import GlobalMaxPooling1D, Dense
 from keras.utils import to_categorical
 from keras.initializers import Constant, RandomUniform
 from keras.preprocessing.sequence import pad_sequences
@@ -8,6 +8,7 @@ from keras.models import Model, Input
 from tensorflow_addons.layers.crf import CRF
 
 from model.extras.crf_subclass_model import ModelWithCRFLoss
+from model.TransformerText.relative_transformer_block import TransformerBlock
 
 import numpy as np
 import string
@@ -18,10 +19,14 @@ from model.base_tagger import BaseTagger
 
 class DLHybridTagger(BaseTagger):
     def __init__(
-        self, word_length=50, char_embed_size=30,
+        self, word_length=50, char_embed_type="cnn", char_embed_size=30,
+        char_conv_config=[[30, 3, -1], [30, 2, -1], [30, 4, -1]],
+        # char transformer config
+        char_trans_block=1, char_trans_head=3, char_trans_dim_ff=60,
+        char_trans_dropout=0.3, char_attention_dropout=0.5, char_trans_scale=1,
         recurrent_dropout=0.5, embedding_dropout=0.5, rnn_units=100,
-        pre_outlayer_dropout=0.5, use_cnn=True, use_crf=True,
-        conv_layers=[[30, 3, -1], [30, 2, -1], [30, 4, -1]], **kwargs
+        pre_outlayer_dropout=0.5, use_crf=True,
+        **kwargs
     ):
         """
         Deep learning based sequence tagger.
@@ -38,7 +43,7 @@ class DLHybridTagger(BaseTagger):
         :param embedding_dropout: float, dropout rate after embedding layer
         :param rnn_units: int, the number of rnn units
         :param pre_outlayer_dropout: float, dropout rate before output layer
-        :param use_cnn: bool, whether to use cnn as character embedding
+        :param char_embed_type: bool, whether to use cnn as character embedding
         :param crf: bool, whether to use crf or softmax
         :param conv_layers: list of list, convolution layer settings,
             relevant when using cnn char embedding
@@ -60,11 +65,47 @@ class DLHybridTagger(BaseTagger):
 
         self.pre_outlayer_dropout = pre_outlayer_dropout
         self.use_crf = use_crf
-        self.use_cnn = use_cnn
-        self.conv_layers = conv_layers
+        self.char_embed_type = char_embed_type
+        self.char_conv_config = char_conv_config
+
+        self.char_trans_block = char_trans_block
+        self.char_trans_head = char_trans_head
+        self.char_trans_dim_ff = char_trans_dim_ff
+        self.char_trans_dropout = char_trans_dropout
+        self.char_attention_dropout = char_attention_dropout
+        self.char_trans_scale = char_trans_scale
 
         if self.use_crf:
             self.loss = "sparse_categorical_crossentropy"
+
+    def char_cnn_block(self, embedding_block):
+        conv_layers = []
+        for filter_num, filter_size, pooling_size in self.char_conv_config:
+            conv_layer = Conv1D(
+                filter_num, filter_size, activation="relu"
+            )(embedding_block)
+            if pooling_size != -1:
+                conv_layer = MaxPooling1D(
+                    pool_size=pooling_size
+                )(conv_layer)
+            conv_layers.append(conv_layer)
+        embedding_block = Concatenate(axis=1)(conv_layers)
+        embedding_block = GlobalMaxPooling1D()(embedding_block)
+        return embedding_block
+
+    def rnn_char(self, embedding_block):
+        pass
+
+    def char_trans_block(self, embedding_block):
+        for _ in range(self.char_trans_block):
+            embedding_block = TransformerBlock(
+                self.char_trans_dim_ff, self.char_trans_head,
+                self.char_embed_size, self.char_trans_dropout,
+                self.char_attention_dropout, self.char_trans_scale
+            )(embedding_block)
+        embedding_block = Dense(self.char_embed_size)(embedding_block)
+        embedding_block = GlobalMaxPooling1D()(embedding_block)
+        return embedding_block
 
     def __get_char_embedding(self):
         """
@@ -81,18 +122,15 @@ class DLHybridTagger(BaseTagger):
                 maxval=np.sqrt(3/self.char_embed_size)
             )
         )(word_input_layer)
-        conv_layers = []
-        for filter_num, filter_size, pooling_size in self.conv_layers:
-            conv_layer = Conv1D(
-                filter_num, filter_size, activation="relu"
-            )(embedding_block)
-            if pooling_size != -1:
-                conv_layer = MaxPooling1D(
-                    pool_size=pooling_size
-                )(conv_layer)
-            conv_layers.append(conv_layer)
-        embedding_block = Concatenate(axis=1)(conv_layers)
-        embedding_block = GlobalMaxPool1D()(embedding_block)
+        if self.char_embed_type == "cnn":
+            embedding_block = self.char_cnn_block(embedding_block)
+        elif self.char_embed_type == "adatrans":
+            embedding_block = self.char_trans_block(embedding_block)
+        elif self.char_embed_type == "rnn":
+            embedding_block = self.char_rnn_block(embedding_block)
+        else:
+            raise ValueError("Invalid char embedding type")
+
         if self.ed > 0:
             embedding_block = Dropout(self.ed)(embedding_block)
         embedding_block = Model(
@@ -120,7 +158,7 @@ class DLHybridTagger(BaseTagger):
         if self.ed > 0:
             word_embed_block = Dropout(self.ed)(word_embed_block)
         # Char Embedding
-        if self.use_cnn:
+        if self.char_embedding_type:
             input_char_layer, char_embed_block = self.__get_char_embedding()
             input_layer = [input_char_layer, input_word_layer]
             embed_block = Concatenate()([char_embed_block, word_embed_block])
@@ -209,7 +247,7 @@ class DLHybridTagger(BaseTagger):
         """
         input_vector = {}
         input_vector["word"] = self.get_word_vector(inp_seq)
-        if self.use_cnn:
+        if self.char_embed_type:
             input_vector["char"] = self.get_char_vector(inp_seq)
         else:
             input_vector = input_vector["word"]
@@ -274,7 +312,7 @@ class DLHybridTagger(BaseTagger):
         self.init_embedding()
         if self.use_crf:
             self.__init_transition_matrix(y)
-        if self.use_cnn:
+        if self.char_embed_type:
             self.init_c2i()
 
         self.init_model()
@@ -305,9 +343,9 @@ class DLHybridTagger(BaseTagger):
             "word_length": self.word_length,
             "idx2label": self.idx2label,
             "use_crf": self.use_crf,
-            "use_cnn": self.use_cnn
+            "char_embed_type": self.char_embed_type
         }
-        if self.use_cnn:
+        if self.char_embed_type:
             class_param["char2idx"] = self.char2idx
         return class_param
 
@@ -322,7 +360,7 @@ class DLHybridTagger(BaseTagger):
             "seq_length": class_param["seq_length"],
             "word_length": class_param["word_length"],
             "use_crf": class_param["use_crf"],
-            "use_cnn": class_param["use_cnn"]
+            "char_embed_type": class_param["char_embed_type"]
         }
         classifier = DLHybridTagger(**constructor_param)
         classifier.label2idx = class_param["label2idx"]

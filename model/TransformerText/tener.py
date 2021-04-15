@@ -16,8 +16,9 @@ from model.TransformerText.relative_transformer_block import TransformerBlock
 
 class TENERTagger(BaseTagger):
     def __init__(
-        self, word_length=50, char_embed_size=30, n_blocks=1, dim_ff=128,
-        n_heads=6, attention_dim=256, fcn_layers=[(512, 0.3, "relu")],
+        self, word_length=50, char_embed_size=30, char_heads=3,
+        char_dim_ff=60, n_blocks=2, dim_ff=128, n_heads=6,
+        attention_dim=256, fcn_layers=[(512, 0.3, "relu")],
         transformer_dropout=0.3, attention_dropout=0.5, embedding_dropout=0.5,
         out_transformer_dropout=0.3, scale=1, **kwargs
     ):
@@ -42,9 +43,11 @@ class TENERTagger(BaseTagger):
         self.attention_dim = attention_dim
         self.scale = scale
         self.fcn_layers = fcn_layers
-        self.loss = "sparse_categorical_crossentropy"
         self.word_length = word_length
         self.char_embed_size = char_embed_size
+        self.char_heads = char_heads
+        self.char_dim_ff = char_dim_ff
+        self.loss = "sparse_categorical_crossentropy"
 
     def __get_char_embedding(self):
         """
@@ -53,19 +56,19 @@ class TENERTagger(BaseTagger):
         word_input_layer = Input(shape=(self.word_length, ))
         # +1 for padding
         embedding_block = Embedding(
-          self.n_chars+1, self.char_embed_size,
-          input_length=self.word_length, trainable=True,
-          mask_zero=True,
-          embeddings_initializer=RandomUniform(
-               minval=-1*np.sqrt(3/self.char_embed_size),
-               maxval=np.sqrt(3/self.char_embed_size)
-               )
-          )(word_input_layer)
+            self.n_chars+1, self.char_embed_size,
+            input_length=self.word_length, trainable=True,
+            mask_zero=True,
+            embeddings_initializer=RandomUniform(
+                minval=-1*np.sqrt(3/self.char_embed_size),
+                maxval=np.sqrt(3/self.char_embed_size)
+            )
+        )(word_input_layer)
         embedding_block = TransformerBlock(
-            60, 3, self.char_embed_size, self.td,
+            self.char_dim_ff, self.char_heads, self.char_embed_size, self.td,
             self.ad, self.scale
         )(embedding_block)
-        embedding_block = Dense(30)(embedding_block)
+        embedding_block = Dense(self.char_embed_size)(embedding_block)
         embedding_block = GlobalMaxPooling1D()(embedding_block)
         if self.ed > 0:
             embedding_block = Dropout(self.ed)(embedding_block)
