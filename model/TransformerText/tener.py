@@ -1,5 +1,6 @@
-from keras.layers import Dense, Dropout, Embedding, Input
-from keras.initializers import Constant
+from keras.layers import Dense, Dropout, Embedding, Input, TimeDistributed
+from keras.layers import GlobalMaxPooling1D, Concatenate
+from keras.initializers import Constant, RandomUniform
 from keras.models import Model
 from keras.preprocessing.sequence import pad_sequences
 
@@ -15,8 +16,8 @@ from model.TransformerText.relative_transformer_block import TransformerBlock
 
 class TENERTagger(BaseTagger):
     def __init__(
-        self, n_blocks=1, dim_ff=128, n_heads=6,
-        attention_dim=300, fcn_layers=[(512, 0.3, "relu")],
+        self, word_length=50, char_embed_size=30, n_blocks=1, dim_ff=128,
+        n_heads=6, attention_dim=256, fcn_layers=[(512, 0.3, "relu")],
         transformer_dropout=0.3, attention_dropout=0.5, embedding_dropout=0.5,
         out_transformer_dropout=0.3, scale=1, **kwargs
     ):
@@ -42,57 +43,56 @@ class TENERTagger(BaseTagger):
         self.scale = scale
         self.fcn_layers = fcn_layers
         self.loss = "sparse_categorical_crossentropy"
+        self.word_length = word_length
+        self.char_embed_size = char_embed_size
 
-    # def __get_char_embedding(self):
-    #     """
-    #     Initialize character embedding
-    #     """
-    #     word_input_layer = Input(shape=(self.word_length, ))
-    #     # +1 for padding
-    #     embedding_block = Embedding(
-    #       self.n_chars+1, self.char_embed_size,
-    #       input_length=self.word_length, trainable=True,
-    #       mask_zero=True,
-    #       embeddings_initializer=RandomUniform(
-    #            minval=-1*np.sqrt(3/self.char_embed_size),
-    #            maxval=np.sqrt(3/self.char_embed_size)
-    #            )
-    #       )(word_input_layer)
-    #     conv_layers = []
-    #     for filter_num, filter_size, pooling_size in self.conv_layers:
-    #         conv_layer = Conv1D(
-    #             filter_num, filter_size, activation="relu"
-    #         )(embedding_block)
-    #         if pooling_size != -1:
-    #             conv_layer = MaxPooling1D(
-    #                 pool_size=pooling_size
-    #             )(conv_layer)
-    #         conv_layers.append(conv_layer)
-    #     embedding_block = Concatenate(axis=1)(conv_layers)
-    #     embedding_block = GlobalMaxPool1D()(embedding_block)
-    #     if self.ed > 0:
-    #         embedding_block = Dropout(self.ed)(embedding_block)
-    #     embedding_block = Model(
-    #         inputs=word_input_layer, outputs=embedding_block)
-    #     embedding_block.summary()
-    #     seq_inp_layer = Input(
-    #         shape=(self.seq_length, self.word_length), name="char"
-    #     )
-    #     embedding_block = TimeDistributed(embedding_block)(seq_inp_layer)
-    #     return seq_inp_layer, embedding_block
+    def __get_char_embedding(self):
+        """
+        Initialize character embedding
+        """
+        word_input_layer = Input(shape=(self.word_length, ))
+        # +1 for padding
+        embedding_block = Embedding(
+          self.n_chars+1, self.char_embed_size,
+          input_length=self.word_length, trainable=True,
+          mask_zero=True,
+          embeddings_initializer=RandomUniform(
+               minval=-1*np.sqrt(3/self.char_embed_size),
+               maxval=np.sqrt(3/self.char_embed_size)
+               )
+          )(word_input_layer)
+        embedding_block = TransformerBlock(
+            60, 3, self.char_embed_size, self.td,
+            self.ad, self.scale
+        )(embedding_block)
+        embedding_block = Dense(30)(embedding_block)
+        embedding_block = GlobalMaxPooling1D()(embedding_block)
+        if self.ed > 0:
+            embedding_block = Dropout(self.ed)(embedding_block)
+        embedding_block = Model(
+            inputs=word_input_layer, outputs=embedding_block)
+        embedding_block.summary()
+        seq_inp_layer = Input(
+            shape=(self.seq_length, self.word_length), name="char"
+        )
+        embedding_block = TimeDistributed(embedding_block)(seq_inp_layer)
+        return seq_inp_layer, embedding_block
 
     def init_model(self):
-        input_layer = Input(shape=(self.seq_length,), name="word")
+        input_word_layer = Input(shape=(self.seq_length,), name="word")
         word_embed_block = Embedding(
             self.vocab_size+1, self.word_embed_size,
             input_length=self.seq_length,
             embeddings_initializer=self.embedding,
             mask_zero=True,
         )
-        word_embed_block = word_embed_block(input_layer)
+        word_embed_block = word_embed_block(input_word_layer)
         if self.ed > 0:
             word_embed_block = Dropout(self.ed)(word_embed_block)
-        self.model = word_embed_block
+        input_char_layer, char_embed_block = self.__get_char_embedding()
+        input_layer = [input_char_layer, input_word_layer]
+        embed_block = Concatenate()([char_embed_block, word_embed_block])
+        self.model = Dense(self.attention_dim)(embed_block)
         for _ in range(self.n_blocks):
             self.model = TransformerBlock(
                 self.dim_ff, self.n_heads, self.attention_dim, self.td,
@@ -170,10 +170,8 @@ class TENERTagger(BaseTagger):
         """
         input_vector = {}
         input_vector["word"] = self.get_word_vector(inp_seq)
-        # if self.use_cnn:
-        #     input_vector["char"] = self.get_char_vector(inp_seq)
-        # else:
-        input_vector = input_vector["word"]
+        input_vector["char"] = self.get_char_vector(inp_seq)
+        # input_vector = input_vector["word"]
         return input_vector
 
     def vectorize_label(self, out_seq):
@@ -226,8 +224,7 @@ class TENERTagger(BaseTagger):
             self.init_w2i(X)
         self.init_embedding()
         self.__init_transition_matrix(y)
-        # if self.use_cnn:
-        #     self.init_c2i()
+        self.init_c2i()
 
         self.init_model()
 

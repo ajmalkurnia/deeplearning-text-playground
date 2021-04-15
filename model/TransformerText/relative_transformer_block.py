@@ -26,12 +26,21 @@ class RelativeMultiAttention(Layer):
         # Init relative embedding
 
     def build(self, input_shape):
-        self.W_q = Dense(self.n_heads*self.dim_head, use_bias=False)  # Wq
-        self.W_k = Dense(self.n_heads*self.dim_head, use_bias=False)  # Wk
-        self.W_v = Dense(self.n_heads*self.dim_head, use_bias=False)  # Wv
+        self.W_q = self.add_weight(
+            shape=(input_shape[0][2], self.n_heads*self.dim_head), name="wq"
+        )  # Wq
+        self.W_k = self.add_weight(
+            shape=(input_shape[0][2], self.n_heads*self.dim_head), name="wk"
+        )  # Wk
+        self.W_v = self.add_weight(
+            shape=(input_shape[0][2], self.n_heads*self.dim_head), name="wv"
+        )  # Wv
 
         # Get hidden/feature shape of the input
-        self.W_o = Dense(input_shape[0][2], use_bias=False, name="o")
+        self.W_o = self.add_weight(
+            shape=(self.n_heads*self.dim_head, input_shape[0][2]),
+            name="o"
+        )
 
         # BUILD
         self.u = self.add_weight(
@@ -90,9 +99,9 @@ class RelativeMultiAttention(Layer):
         else:
             query, key, value = inputs
 
-        q_vec = self.W_q(query)  # B x S x (n_heads * d )
-        k_vec = self.W_k(key)  # B x S x (n_heads * d )
-        v_vec = self.W_v(value)  # B x S x (n_heads * d )
+        q_vec = K.dot(value, self.W_q)  # B x S x (n_heads * d )
+        k_vec = K.dot(value, self.W_k)  # B x S x (n_heads * d )
+        v_vec = K.dot(value, self.W_v)  # B x S x (n_heads * d )
         # split heads and d
         q_vec = self.reshape_heads(q_vec)  # B x n_heads x S x d
         k_vec = self.reshape_heads(k_vec)  # B x n_heads x S x d
@@ -105,10 +114,10 @@ class RelativeMultiAttention(Layer):
         # q*k + u*k + q*r + v*r
         # (q+u) * k + q*r + v*r
         term_ac = q_vec + self.u[:, None]
-        term_ac = tf.einsum("bnqd,bnkd->bnqk", term_ac, q_vec)
+        term_ac = tf.einsum("bnqd,bnkd->bnqk", term_ac, k_vec)
         term_b = tf.einsum("nd,ld->nl", self.v, self.pos_embed)[None, :, None]
         term_d = tf.einsum("bnqd,ld->bnql", q_vec, self.pos_embed)
-        term_e = tf.einsum("bnqd,ld->bnql", v_vec, self.pos_embed)
+        term_e = tf.einsum("bnqd,ld->bnql", k_vec, self.pos_embed)
         term_bde = self.shift(term_b + term_d) + self.t_shift(term_e)
         attention = term_ac + term_bde
 
@@ -123,7 +132,8 @@ class RelativeMultiAttention(Layer):
         o_seq = K.reshape(o_seq, (
             -1, o_seq.shape[1], self.dim_head*self.n_heads
         ))
-        output = self.W_o(o_seq)  # B x S x attention_d
+        # B x S x attention_d
+        output = tf.einsum("bhd,dl->bhl", o_seq, self.W_o)
         return output
 
 
@@ -170,6 +180,9 @@ class TransformerBlock(Layer):
         fcn_out = self.fcn_dropout(fcn_out, training=training)
 
         return self.fcn_layer_norm(mha_out + fcn_out)
+
+    def compute_output_shape(self, input_shape):
+        return input_shape
 
     def get_config(self):
         config = super(TransformerBlock, self).get_config()

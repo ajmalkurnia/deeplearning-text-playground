@@ -242,7 +242,7 @@ def tener_tagger_args(subparser):
     )
     tener_tag_parser.add_argument(
         "--attentiondim", type=int, help="Unit inside attention",
-        default=300
+        default=256
     )
     tener_tag_parser.add_argument(
         "--transformerdropout", type=float, help="Dropout rate in Transformer",
