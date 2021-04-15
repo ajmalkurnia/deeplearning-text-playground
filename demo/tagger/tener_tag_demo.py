@@ -42,7 +42,7 @@ def main(args, data):
 
         hybrid_tagger = TENERTagger(**class_parameter)
         hybrid_tagger.train(
-            train[0], train[1], args.epoch, valid
+            train[0], train[1], args.epoch, valid, args.batchsize
         )
     logging.info("Prediction")
     y_pred = hybrid_tagger.predict(test[0])

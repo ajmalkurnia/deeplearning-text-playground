@@ -114,10 +114,18 @@ class RelativeMultiAttention(Layer):
         # q*k + u*k + q*r + v*r
         # (q+u) * k + q*r + v*r
         term_ac = q_vec + self.u[:, None]
-        term_ac = tf.einsum("bnqd,bnkd->bnqk", term_ac, k_vec)
-        term_b = tf.einsum("nd,ld->nl", self.v, self.pos_embed)[None, :, None]
-        term_d = tf.einsum("bnqd,ld->bnql", q_vec, self.pos_embed)
-        term_e = tf.einsum("bnqd,ld->bnql", k_vec, self.pos_embed)
+        term_ac = tf.einsum(
+            "bnqd,bnkd->bnqk", term_ac, k_vec, optimize="optimal"
+        )
+        term_b = tf.einsum(
+            "nd,ld->nl", self.v, self.pos_embed, optimize="optimal"
+        )[None, :, None]
+        term_d = tf.einsum(
+            "bnqd,ld->bnql", q_vec, self.pos_embed, optimize="optimal"
+        )
+        term_e = tf.einsum(
+            "bnqd,ld->bnql", k_vec, self.pos_embed, optimize="optimal"
+        )
         term_bde = self.shift(term_b + term_d) + self.t_shift(term_e)
         attention = term_ac + term_bde
 
