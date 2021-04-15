@@ -18,6 +18,7 @@ def get_args():
     subparser = hybrid_tagger_args(subparser, "rnn-seq")
     subparser = cnn_tagger_args(subparser)
     subparser = idcnn_tagger_args(subparser)
+    subparser = tener_tagger_args(subparser)
     return parser
 
 
@@ -221,5 +222,42 @@ def idcnn_tagger_args(subparser):
     idcnn_subparser.add_argument(
         "--repeat", type=int, help="Repeat block x times",
         default=1
+    )
+    return subparser
+
+
+def tener_tagger_args(subparser):
+    tener_tag_parser = subparser.add_parser(
+        "tener", help="Run TENER Model"
+    )
+    tener_tag_parser.add_argument(
+        "--nblocks", type=int, help="Transformer block", default=2
+    )
+    tener_tag_parser.add_argument(
+        "--nheads", type=int, help="Attention Heads", default=8
+    )
+    tener_tag_parser.add_argument(
+        "--dimff", type=int, help="Feed forward unit inside transformer",
+        default=256
+    )
+    tener_tag_parser.add_argument(
+        "--attentiondim", type=int, help="Unit inside attention",
+        default=300
+    )
+    tener_tag_parser.add_argument(
+        "--transformerdropout", type=float, help="Dropout rate in Transformer",
+        default=0.5
+    )
+    tener_tag_parser.add_argument(
+        "--attentiondropout", type=float, help="Dropout rate in HeadAttention",
+        default=0.5
+    )
+    tener_tag_parser.add_argument(
+        "--embeddingdropout", type=float, help="Dropout rate after embedding",
+        default=0.5
+    )
+    tener_tag_parser.add_argument(
+        "--outtransformerdropout", type=float,
+        help="Dropout rate after transformer", default=0.5
     )
     return subparser
