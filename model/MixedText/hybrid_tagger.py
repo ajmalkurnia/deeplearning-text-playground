@@ -20,13 +20,19 @@ from model.base_tagger import BaseTagger
 class DLHybridTagger(BaseTagger):
     def __init__(
         self, word_length=50, char_embed_type="cnn", char_embed_size=30,
+        main_layer_type="rnn",
+        # char convolution config
         char_conv_config=[[30, 3, -1], [30, 2, -1], [30, 4, -1]],
         # char transformer config
         char_trans_block=1, char_trans_head=3, char_trans_dim_ff=60,
         char_trans_dropout=0.3, char_attention_dropout=0.5, char_trans_scale=1,
-        recurrent_dropout=0.5, embedding_dropout=0.5, rnn_units=100,
-        pre_outlayer_dropout=0.5, use_crf=True,
-        **kwargs
+        # transformer config
+        trans_blocks=2, trans_heads=8, trans_dim_ff=256, trans_dropout=0.5,
+        attention_dropout=0.5, trans_scale=1, trans_attention_dim=256,
+        # rnn config
+        recurrent_dropout=0.5, rnn_units=100, embedding_dropout=0.5,
+        main_layer_dropout=0.5, fcn_layers=[(512, 0.3, "relu")],
+        use_crf=True, **kwargs
     ):
         """
         Deep learning based sequence tagger.
@@ -58,12 +64,12 @@ class DLHybridTagger(BaseTagger):
         super(DLHybridTagger, self).__init__(**kwargs)
         self.word_length = word_length
         self.char_embed_size = char_embed_size
+        self.ed = embedding_dropout
 
         self.rnn_units = rnn_units
         self.rd = recurrent_dropout
-        self.ed = embedding_dropout
 
-        self.pre_outlayer_dropout = pre_outlayer_dropout
+        self.main_layer_dropout = main_layer_dropout
         self.use_crf = use_crf
         self.char_embed_type = char_embed_type
         self.char_conv_config = char_conv_config
@@ -75,6 +81,15 @@ class DLHybridTagger(BaseTagger):
         self.char_attention_dropout = char_attention_dropout
         self.char_trans_scale = char_trans_scale
 
+        self.trans_blocks = trans_blocks
+        self.trans_heads = trans_heads
+        self.trans_dim_ff = trans_dim_ff
+        self.trans_attention_dim = trans_attention_dim
+        self.td = trans_dropout
+        self.ad = attention_dropout
+        self.trans_scale = trans_scale
+
+        self.main_layer_type = main_layer_type
         if self.use_crf:
             self.loss = "sparse_categorical_crossentropy"
 
@@ -142,6 +157,22 @@ class DLHybridTagger(BaseTagger):
         embedding_block = TimeDistributed(embedding_block)(seq_inp_layer)
         return seq_inp_layer, embedding_block
 
+    def main_rnn_block(self, embed_block):
+        main_layer = Bidirectional(LSTM(
+            units=self.rnn_units, return_sequences=True,
+            dropout=self.rd,
+        ))(embed_block)
+        return main_layer
+
+    def main_trans_block(self, embed_block):
+        main_layer = Dense(self.trans_attention_dim)(embed_block)
+        for _ in range(self.trans_blocks):
+            main_layer = TransformerBlock(
+                self.trans_dim_ff, self.trans_heads, self.trans_attention_dim,
+                self.td, self.ad, self.trans_scale
+            )(main_layer)
+        return main_layer
+
     def init_model(self):
         """
         Initialize the network model
@@ -165,12 +196,16 @@ class DLHybridTagger(BaseTagger):
         else:
             embed_block = word_embed_block
             input_layer = input_word_layer
-        # RNN
-        self.model = Bidirectional(LSTM(
-            units=self.rnn_units, return_sequences=True,
-            dropout=self.rd,
-        ))(embed_block)
-        self.model = Dropout(self.pre_outlayer_dropout)(self.model)
+        if self.main_layer_type == "rnn":
+            self.model = self.main_rnn_block(embed_block)
+        elif self.main_layer_type == "adatrans":
+            self.model = self.main_trans_block(embed_block)
+
+        self.model = Dropout(self.main_layer_dropout)(self.model)
+        for units, do_rate, activation in self.fcn_layers:
+            self.model = Dense(units, activation=activation)(self.model)
+            self.model = Dropout(do_rate)(self.model)
+
         if self.use_crf:
             crf = CRF(
                 self.n_label+1,
