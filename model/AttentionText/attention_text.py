@@ -182,3 +182,25 @@ class Attention(Layer):
         config["score"] = self.score
         config["penalty"] = self.penalty
         return config
+
+
+class CharTagAttention(Layer):
+    def __init__(self, feature, max_length, **kwargs):
+        super(CharTagAttention, self).__init__(**kwargs)
+        self.feature = feature
+        self.maxlen = max_length
+
+    def build(self, input_shape):
+        self.W = self.add_weight(shape=(self.feature))
+
+    def call(self, query, mask):
+        att_score = K(axes=[2, 1])([query, self.W])
+        att_score = Activation("softmax")(att_score)
+        att_mat = Dot(axes=[2, 1])([K.transpose(query), att_score])
+        vector = Lambda(lambda x: K.sum(x, axis=1))(att_mat)
+        return vector
+
+    def compute_output_shape(self, input_shape):
+        return (input_shape[0], input_shape[2])
+
+    # def get_config(self): pass
