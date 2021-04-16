@@ -20,13 +20,13 @@ from model.base_tagger import BaseTagger
 class DLHybridTagger(BaseTagger):
     def __init__(
         self, word_length=50, char_embed_type="cnn", char_embed_size=30,
-        main_layer_type="rnn", char_word_merge="concat",
+        main_layer_type="rnn",
         # char convolution config
         char_conv_config=[[30, 3, -1], [30, 2, -1], [30, 4, -1]],
         # char transformer config
         char_trans_block=1, char_trans_head=3, char_trans_dim_ff=60,
         char_trans_dropout=0.3, char_attention_dropout=0.5, char_trans_scale=1,
-        char_rnn_units=25, char_attention=None, char_recurrent_dropout=0.33,
+        char_rnn_units=25, char_recurrent_dropout=0.33,
         # transformer config
         trans_blocks=2, trans_heads=8, trans_dim_ff=256, trans_dropout=0.5,
         attention_dropout=0.5, trans_scale=1, trans_attention_dim=256,
@@ -69,9 +69,7 @@ class DLHybridTagger(BaseTagger):
 
         self.rnn_units = rnn_units
         self.rd = recurrent_dropout
-        self.char_word_merge = char_word_merge
         self.char_rnn_units = char_rnn_units
-        self.char_attention = char_attention
         self.char_rd = char_recurrent_dropout
 
         self.main_layer_dropout = main_layer_dropout

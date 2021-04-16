@@ -13,10 +13,7 @@ DEMOS = {
     "transformer-classification": transformer_classify_demo,
     "han-classification": han_classify_demo,
     "rcnn-classification": rcnn_classify_demo,
-    "rnn-seq-tagger": hybrid_tag_demo,
-    "rnn-crf-tagger": hybrid_tag_demo,
-    "cnn-rnn-tagger": hybrid_tag_demo,
-    "cnn-rnn-crf-tagger": hybrid_tag_demo,
+    "hybrid-tagger": hybrid_tag_demo,
     "cnn-seq-tagger": cnn_tag_demo,
     "idcnn-tagger": idcnn_tag_demo,
     "tener-tagger": tener_tag_demo

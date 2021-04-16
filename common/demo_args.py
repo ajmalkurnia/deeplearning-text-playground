@@ -13,9 +13,6 @@ def get_args():
     subparser = han_args(subparser)
     subparser = rcnn_args(subparser)
     subparser = hybrid_tagger_args(subparser)
-    subparser = hybrid_tagger_args(subparser, "cnn-rnn")
-    subparser = hybrid_tagger_args(subparser, "rnn-crf")
-    subparser = hybrid_tagger_args(subparser, "rnn-seq")
     subparser = cnn_tagger_args(subparser)
     subparser = idcnn_tagger_args(subparser)
     subparser = tener_tagger_args(subparser)
@@ -166,28 +163,88 @@ def rcnn_args(subparser):
     return subparser
 
 
-def hybrid_tagger_args(subparser, name="cnn-rnn-crf"):
+def hybrid_tagger_args(subparser):
     hybrid_tag_parser = subparser.add_parser(
-        name, help=f"Run {name.upper()} Model"
+        "Hybrid", help="Run Hybrid Model"
     )
     hybrid_tag_parser.add_argument(
-        "-u", "--unitrnn", type=int, help="RNN unit size", default=100
+        "--charlayer", type=str, help="Main Layer settings",
+        choices={"cnn", "rnn", "adatrans"}
     )
     hybrid_tag_parser.add_argument(
-        "--charembedsize", type=int, help="Character embedding size",
-        default=30
+        "--mainlayer", type=str, help="Main Layer settings",
+        choices={"rnn", "adatrans"}, default="rnn", required=True
     )
     hybrid_tag_parser.add_argument(
-        "--recurrentdropout", type=float, help="Dropout rate inside RNN",
+        "--outlayer", type=str, help="Main Layer settings",
+        choices={"crf", "softmax"}, default="crf", required=True
+    )
+    group1 = hybrid_tag_parser.add_argument_group("Char RNN Settings")
+    group1.add_argument(
+        "--charrnnunits", type=int, help="RNN unit on char Level", default=25
+    )
+    group1.add_argument(
+        "--charrnndropout", type=float, help="Dropout rate in char-RNN",
         default=0.5
     )
-    hybrid_tag_parser.add_argument(
-        "--embeddingdropout", type=float, help="Dropout rate after embedding",
+    group2 = hybrid_tag_parser.add_argument_group("Char AdaTrans Settings")
+    group2.add_argument(
+        "--chartransblocks", type=int, help="Char-transfomer blocks", default=2
+    )
+    group2.add_argument(
+        "--chartransheads", type=int, help="Char-transfomer attention heads",
+        default=8
+    )
+    group2.add_argument(
+        "--chartransdimff", type=int, help="Char-transfomer ff dimension",
+        default=256
+    )
+    group2.add_argument(
+        "--chartransdropout", type=float, help="Char-transfomer dropout",
         default=0.5
     )
-    hybrid_tag_parser.add_argument(
-        "--preoutputdropout", type=float, help="Dropout rate before output",
+    group2.add_argument(
+        "--chartransattdropout", type=float,
+        help="Char-transfomer attention dropout", default=0.5
+    )
+    group2.add_argument(
+        "--chartransscale", type=int, help="Char-transfomer attention scaling",
+        default=1
+    )
+    group3 = hybrid_tag_parser.add_argument_group("Main RNN Settings")
+    group3.add_argument(
+        "--rnnunits", type=int, help="RNN unit on word Level", default=100
+    )
+    group3.add_argument(
+        "--rnndropout", type=float, help="Dropout rate in RNN", default=0.5
+    )
+    group4 = hybrid_tag_parser.add_argument_group("Main AdaTrans Settings")
+    group4.add_argument(
+        "--transblocks", type=int, help="Transfomer blocks", default=2
+    )
+    group4.add_argument(
+        "--transheads", type=int, help="Transfomer attention heads",
+        default=8
+    )
+    group4.add_argument(
+        "--transdimff", type=int, help="Transfomer ff dimension",
+        default=256
+    )
+    group4.add_argument(
+        "--transdropout", type=float, help="Transfomer dropout",
         default=0.5
+    )
+    group4.add_argument(
+        "--transattdropout", type=float,
+        help="Transfomer attention dropout", default=0.5
+    )
+    group4.add_argument(
+        "--transscale", type=int, help="Transfomer attention scaling",
+        default=1
+    )
+    group4.add_argument(
+        "--transattdim", type=int, help="Transormer attention dimension",
+        default=256
     )
     return subparser
 
