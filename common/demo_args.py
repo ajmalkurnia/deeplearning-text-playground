@@ -16,6 +16,7 @@ def get_args():
     subparser = cnn_tagger_args(subparser)
     subparser = idcnn_tagger_args(subparser)
     subparser = tener_tagger_args(subparser)
+    subparser = rnn_rnn_tagger_args(subparser)
     return parser
 
 
@@ -316,5 +317,33 @@ def tener_tagger_args(subparser):
     tener_tag_parser.add_argument(
         "--outtransformerdropout", type=float,
         help="Dropout rate after transformer", default=0.5
+    )
+    return subparser
+
+
+def rnn_rnn_tagger_args(subparser):
+    rnn_tag_parser = subparser.add_parser(
+        "rnn-attention", help="Run RNN-Attention-RNN Model"
+    )
+    rnn_tag_parser.add_arguments(
+        "--charembedsize", type=int, default=100,
+    )
+    rnn_tag_parser.add_arguments(
+        "--charrnnunits", type=int, default=25,
+    )
+    rnn_tag_parser.add_arguments(
+        "--rnnunits", type=int, default=400,
+    )
+    rnn_tag_parser.add_arguments(
+        "--charrecurrentdropout", type=float, default=0.33,
+    )
+    rnn_tag_parser.add_arguments(
+        "--recurrentdropout", type=float, default=0.33,
+    )
+    rnn_tag_parser.add_arguments(
+        "--embeddingdropout", type=float, default=0.5,
+    )
+    rnn_tag_parser.add_arguments(
+        "--mainlayerdropouts", type=float, default=0.5
     )
     return subparser
