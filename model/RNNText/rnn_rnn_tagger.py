@@ -95,17 +95,26 @@ class StackedRNNTagger(BaseTagger):
         """
         # Word Embebedding
         input_word_layer = Input(shape=(self.seq_length,), name="word")
-        word_embed_block = Embedding(
+        pre_trained_word_embed = Embedding(
             self.vocab_size+1, self.word_embed_size,
             input_length=self.seq_length,
             embeddings_initializer=self.embedding,
             mask_zero=True,
+            trainable=False
         )
-        word_embed_block = word_embed_block(input_word_layer)
+        pre_trained_word_embed = pre_trained_word_embed(input_word_layer)
+        learnable_word_embed = Embedding(
+            self.vocab_size+1, self.word_embed_size,
+            input_length=self.seq_length,
+            embeddings_initializer="glorot_uniform",
+            mask_zero=True
+        )(input_word_layer)
         # Char Embedding
         input_char_layer, char_embed_block = self.__get_char_embedding()
         input_layer = [input_char_layer, input_word_layer]
-        embed_block = Add()([char_embed_block, word_embed_block])
+        embed_block = Add()(
+            [char_embed_block, pre_trained_word_embed, learnable_word_embed]
+            )
         if self.ed > 0:
             embed_block = Dropout(self.ed)(embed_block)
 
