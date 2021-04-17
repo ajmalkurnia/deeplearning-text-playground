@@ -191,12 +191,12 @@ class CharTagAttention(Layer):
         self.maxlen = max_length
 
     def build(self, input_shape):
-        self.W = self.add_weight(shape=(self.feature))
+        self.W = Dense(self.feature, use_bias=False)
 
     def call(self, query, mask):
-        att_score = K(axes=[2, 1])([query, self.W])
+        att_score = self.W(query)
         att_score = Activation("softmax")(att_score)
-        att_mat = Dot(axes=[2, 1])([K.transpose(query), att_score])
+        att_mat = Dot(axes=[1, 1])([query, att_score])
         vector = Lambda(lambda x: K.sum(x, axis=1))(att_mat)
         return vector
 

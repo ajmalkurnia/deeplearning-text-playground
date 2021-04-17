@@ -14,7 +14,7 @@ from model.base_tagger import BaseTagger
 class StackedRNNTagger(BaseTagger):
     def __init__(
         self, word_length=50, char_embed_size=100,
-        char_rnn_units=25, char_recurrent_dropout=0.33,
+        char_rnn_units=400, char_recurrent_dropout=0.33,
         recurrent_dropout=0.33, rnn_units=400, embedding_dropout=0.5,
         main_layer_dropout=0.5, **kwargs
     ):
@@ -70,12 +70,12 @@ class StackedRNNTagger(BaseTagger):
         )(word_input_layer)
 
         rnn_output = LSTM(
-            self.char_rnn_unit, recurrent_dropout=self.char_rd,
+            self.char_rnn_units, recurrent_dropout=self.char_rd,
             return_sequences=True, return_state=True
         )(embedding_block)
         embedding_block, h, c = rnn_output
         embedding_block = CharTagAttention(
-            self.char_embed_size, self.word_length
+            self.char_rnn_units, self.word_length
         )(embedding_block)
         embedding_block = Concatenate()([embedding_block, c])
         embedding_block = Dense(self.word_embed_size)(embedding_block)
@@ -120,17 +120,20 @@ class StackedRNNTagger(BaseTagger):
 
         self.model = embed_block
         self.model = Bidirectional(LSTM(
-            units=self.rnn_units, return_sequences=True,
-            dropout=self.rd,
+            self.rnn_units, return_sequences=True,
+            recurrent_dropout=self.rd
         ))(self.model)
         self.model = Dropout(self.main_layer_dropout)(self.model)
         self.model = Bidirectional(LSTM(
-            units=self.rnn_units, return_sequences=True,
-            dropout=self.rd,
+            self.rnn_units, return_sequences=True,
+            recurrent_dropout=self.rd
         ))(self.model)
         self.model = Dense(self.n_label+1, activation="relu")(self.model)
         # Dense layer
-        out = Dense(self.n_label+1)(self.model)
+        self.model = Dense(self.n_label+1)(self.model)
+        out = TimeDistributed(
+            Dense(self.n_label+1, activation="softmax")
+        )(self.model)
         self.model = Model(input_layer, out)
         self.model.summary()
         self.model.compile(loss=self.loss, optimizer=self.optimizer)

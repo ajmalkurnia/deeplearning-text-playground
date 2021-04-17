@@ -166,7 +166,7 @@ def rcnn_args(subparser):
 
 def hybrid_tagger_args(subparser):
     hybrid_tag_parser = subparser.add_parser(
-        "Hybrid", help="Run Hybrid Model"
+        "hybrid", help="Run Hybrid Model"
     )
     hybrid_tag_parser.add_argument(
         "--charlayer", type=str, help="Main Layer settings",
@@ -325,25 +325,25 @@ def rnn_rnn_tagger_args(subparser):
     rnn_tag_parser = subparser.add_parser(
         "rnn-attention", help="Run RNN-Attention-RNN Model"
     )
-    rnn_tag_parser.add_arguments(
+    rnn_tag_parser.add_argument(
         "--charembedsize", type=int, default=100,
     )
-    rnn_tag_parser.add_arguments(
-        "--charrnnunits", type=int, default=25,
+    rnn_tag_parser.add_argument(
+        "--charrnnunits", type=int, default=400,
     )
-    rnn_tag_parser.add_arguments(
+    rnn_tag_parser.add_argument(
         "--rnnunits", type=int, default=400,
     )
-    rnn_tag_parser.add_arguments(
+    rnn_tag_parser.add_argument(
         "--charrecurrentdropout", type=float, default=0.33,
     )
-    rnn_tag_parser.add_arguments(
+    rnn_tag_parser.add_argument(
         "--recurrentdropout", type=float, default=0.33,
     )
-    rnn_tag_parser.add_arguments(
+    rnn_tag_parser.add_argument(
         "--embeddingdropout", type=float, default=0.5,
     )
-    rnn_tag_parser.add_arguments(
+    rnn_tag_parser.add_argument(
         "--mainlayerdropouts", type=float, default=0.5
     )
     return subparser

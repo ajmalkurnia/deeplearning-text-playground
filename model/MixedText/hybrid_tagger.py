@@ -32,7 +32,7 @@ class DLHybridTagger(BaseTagger):
         attention_dropout=0.5, trans_scale=1, trans_attention_dim=256,
         # rnn config
         recurrent_dropout=0.5, rnn_units=100, embedding_dropout=0.5,
-        main_layer_dropout=0.5, fcn_layers=[(512, 0.3, "relu")],
+        main_layer_dropout=0.5, fcn_layers=[],
         use_crf=True, **kwargs
     ):
         """
@@ -92,6 +92,7 @@ class DLHybridTagger(BaseTagger):
         self.ad = attention_dropout
         self.trans_scale = trans_scale
 
+        self.fcn_layers = fcn_layers
         self.main_layer_type = main_layer_type
         if self.use_crf:
             self.loss = "sparse_categorical_crossentropy"
@@ -113,7 +114,7 @@ class DLHybridTagger(BaseTagger):
 
     def char_rnn_block(self, embedding_block):
         return Bidirectional(
-            LSTM(self.char_rnn_unit, recurrent_dropout=self.char_rd)
+            LSTM(self.char_rnn_units, recurrent_dropout=self.char_rd)
         )(embedding_block)
 
     def char_trans_block(self, embedding_block):
@@ -165,7 +166,7 @@ class DLHybridTagger(BaseTagger):
     def main_rnn_block(self, embed_block):
         main_layer = Bidirectional(LSTM(
             units=self.rnn_units, return_sequences=True,
-            dropout=self.rd,
+            recurrent_dropout=self.rd,
         ))(embed_block)
         return main_layer
 
@@ -194,7 +195,7 @@ class DLHybridTagger(BaseTagger):
         if self.ed > 0:
             word_embed_block = Dropout(self.ed)(word_embed_block)
         # Char Embedding
-        if self.char_embedding_type:
+        if self.char_embed_type:
             input_char_layer, char_embed_block = self.__get_char_embedding()
             input_layer = [input_char_layer, input_word_layer]
             embed_block = Concatenate()([char_embed_block, word_embed_block])
