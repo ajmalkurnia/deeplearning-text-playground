@@ -186,6 +186,13 @@ class Attention(Layer):
 
 class CharTagAttention(Layer):
     def __init__(self, feature, max_length, **kwargs):
+        """
+        Attention for Tagger from:
+        https://www.aclweb.org/anthology/K17-3002/
+
+        :param feature: int, Attention units
+        :param max_length: int, maximum input length
+        """
         super(CharTagAttention, self).__init__(**kwargs)
         self.feature = feature
         self.maxlen = max_length

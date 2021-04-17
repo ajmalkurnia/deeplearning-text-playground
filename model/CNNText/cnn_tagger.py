@@ -13,7 +13,10 @@ class CNNTagger(BaseTagger):
         conv_layers=[[[128, 3], [128, 5]], [[256, 5]], [[256, 5]]], **kwargs
     ):
         """
-        CNN based sequence tagger.
+        CNN based sequence tagger based on:
+        https://www.aclweb.org/anthology/P18-2094/
+        Create matrix of custom embedding to use the double embedding input
+        the paper is using
 
         :param embedding_dropout: float, dropout rate after embedding layer
         :param pre_outlayer_dropout: float, dropout rate before output layer
@@ -45,6 +48,7 @@ class CNNTagger(BaseTagger):
         embedding_layer = embedding_layer(input_layer)
         embedding_layer = Dropout(self.ed)(embedding_layer)
         x = None
+        # CNN layer
         for idx, layer in enumerate(self.conv_layers):
             conv_layers = []
             for filter_num, filter_size in layer:
@@ -61,14 +65,16 @@ class CNNTagger(BaseTagger):
             else:
                 x = conv_layers[0]
         self.model = Dropout(self.pre_outlayer_dropout)(x)
+        # Out dense layer
         out = TimeDistributed(Dense(
             self.n_label+1, activation="softmax"
         ))(self.model)
+
         self.model = Model(input_layer, out)
         self.model.summary()
         self.model.compile(loss=self.loss, optimizer=self.optimizer)
 
-    def get_class_param(self, filepath, zipf):
+    def get_class_param(self):
         class_param = {
             "label2idx": self.label2idx,
             "word2idx": self.word2idx,
@@ -81,6 +87,7 @@ class CNNTagger(BaseTagger):
     def init_from_config(class_param):
         """
         Load model from the saved zipfile
+
         :param filepath: path to model zip file
         :return classifier: Loaded model class
         """

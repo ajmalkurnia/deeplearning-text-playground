@@ -16,17 +16,26 @@ class IDCNNTagger(BaseTagger):
         fcn_layers=[(1024, 0.5, "relu")], **kwargs
     ):
         """
-        CNN based sequence tagger.
+        IDCNN sequence tagger. with CRF as output
+        Paper: https://www.aclweb.org/anthology/D17-1283/
 
         :param embedding_dropout: float, dropout rate after embedding layer
-        :param pre_outlayer_dropout: float, dropout rate before output layer
-        :param conv_layers: 3D list-like, convolution layer settings,
-            each list component denotes config for 1 layer,
-                each config consist of 2 length tuple/list that denotes:
+        :param block_out_dropout: float, dropout rate after each idcnn blocks
+        :param repeat: int, repeat conv_layers (block) n times
+        :param conv_layers: 2D list-like, convolution layer settings,
+            each list element denotes config for 1 layer,
+                each config consist of 3 length tuple/list that denotes:
                     int, number of filter,
                     int, filter size,
-            each convolution will be concatenated for 1 layer,
+                    int, dilation rate
             each layer is connected sequentially
+        :param fcn_layers: 2D list-like, Fully Connected layer settings,
+            will be placed after conv layer,
+            each list element denotes config for 1 layer,
+                each config consist of 3 length tuple/list that denotes:
+                    int, number of dense unit
+                    float, dropout after dense layer
+                    activation, activation function
         """
         super(IDCNNTagger, self).__init__(**kwargs)
         self.ed = embedding_dropout
@@ -50,6 +59,7 @@ class IDCNNTagger(BaseTagger):
         )
         embedding_layer = embedding_layer(input_layer)
         conv_layer = Dropout(self.ed)(embedding_layer)
+        # IDCNN Layer
         for idx in range(self.repeat):
             for filter_num, filter_size, d in self.conv_layers:
                 conv_layer = Conv1D(
@@ -59,6 +69,7 @@ class IDCNNTagger(BaseTagger):
                     padding="same"
                 )(conv_layer)
             conv_layer = Dropout(self.block_out_dropout)(conv_layer)
+        # FCN layer
         fcn_layer = conv_layer
         for unit, dropout, activation in self.fcn_layers:
             fcn_layer = Dense(
@@ -66,6 +77,7 @@ class IDCNNTagger(BaseTagger):
             )(fcn_layer)
             fcn_layer = Dropout(dropout)(fcn_layer)
         self.model = Dense(self.n_label+1)(fcn_layer)
+        # CRF Layer
         crf = CRF(self.n_label+1)
         out = crf(self.model)
         self.model = Model(inputs=input_layer, outputs=out)
@@ -75,6 +87,13 @@ class IDCNNTagger(BaseTagger):
         self.model.compile(loss=self.loss, optimizer=self.optimizer)
 
     def __init_transition_matrix(self, y):
+        """
+        Initialized transition matrix for CRF
+
+        :param y: 2D list, label of the dataset
+        :return transition_matrix: numpy array [n_label+1, n_label+1],
+            Transition matrix of the training label
+        """
         n_labels = self.n_label + 1
         self.transition_matrix = np.zeros((n_labels, n_labels))
         for data in y:
@@ -95,10 +114,9 @@ class IDCNNTagger(BaseTagger):
     def vectorize_label(self, out_seq):
         """
         Get prepare vector of the label for training
+
         :param out_seq: list of list of string, tokenized input corpus
-        :return out_seq: 2D/3D numpy array, vector of label data
-            return 2D array when using crf
-            return 3D array when not using crf
+        :return out_seq: numpy array [n_data, seq_length], vector of label data
         """
         out_seq = [[self.label2idx[w] for w in s] for s in out_seq]
         out_seq = pad_sequences(
@@ -107,6 +125,12 @@ class IDCNNTagger(BaseTagger):
         return np.array(out_seq)
 
     def init_training(self, X, y):
+        """
+        Initialized necessary class attributes for training
+
+        :param X: 2D list, training dataset in form of tokenized corpus
+        :param y: 2D list, training data label
+        """
         self.init_l2i(y)
         if self.word2idx is None:
             self.init_w2i(X)
@@ -117,6 +141,7 @@ class IDCNNTagger(BaseTagger):
     def get_crf_label(self, pred_sequence, input_data):
         """
         Get label sequence
+
         :param pred_sequence: 4 length list, prediction results from CRF layer
         :param input_data: list of list of string, tokenized input corpus
         :return label_seq: list of list of string, readable label sequence
@@ -128,6 +153,7 @@ class IDCNNTagger(BaseTagger):
                 if w in self.idx2label:
                     label = self.idx2label[w]
                 else:
+                    # Back-up in case of pad label "0" is choosen
                     label = self.idx2label[np.argmax(
                         pred_sequence[1][i][j][1:]
                     ) + 1]
@@ -138,6 +164,7 @@ class IDCNNTagger(BaseTagger):
     def devectorize_label(self, pred_sequence, input_data):
         """
         Get readable label sequence
+
         :param pred_sequence: 4 length list, prediction results from CRF layer
         :param input_data: list of list of string, tokenized input corpus
         :return label_seq: list of list of string, readable label sequence
@@ -145,6 +172,12 @@ class IDCNNTagger(BaseTagger):
         return self.get_crf_label(pred_sequence, input_data)
 
     def save_crf(self, filepath, zipf):
+        """
+        Saving CRF model
+
+        :param filepath: string, zip file path
+        :param zipf: zipfile
+        """
         for dirpath, dirs, files in os.walk(filepath):
             if files == []:
                 zipf.write(
@@ -155,10 +188,16 @@ class IDCNNTagger(BaseTagger):
                 zipf.write(fn, "/".join(fn.split("/")[3:]))
 
     def save_network(self, filepath, zipf):
+        """
+        Saving keras model
+
+        :param filepath: string, save file path
+        :param zipf: zipfile
+        """
         self.model.save(filepath[:-5], save_format="tf")
         self.save_crf(filepath[:-5], zipf)
 
-    def get_class_param(self, filepath, zipf):
+    def get_class_param(self):
         class_param = {
             "label2idx": self.label2idx,
             "word2idx": self.word2idx,
@@ -171,6 +210,7 @@ class IDCNNTagger(BaseTagger):
     def init_from_config(class_param):
         """
         Load model from the saved zipfile
+
         :param filepath: path to model zip file
         :return classifier: Loaded model class
         """

@@ -21,29 +21,21 @@ class StackedRNNTagger(BaseTagger):
         """
         Deep learning based sequence tagger.
         Consist of:
-            - Char embedding (CNN Optional)
+            - Char embedding (RNN+Attention)
             - RNN
-            - CRF (Optional)
+        based on postag model of:
+        https://www.aclweb.org/anthology/K17-3002/
 
         :param word_length: int, maximum character length in a token,
             relevant when using cnn
         :param char_embed_size: int, the size of character level embedding,
             relevant when using cnn
+        :param char_rnn_units: int, RNN units on char level
+        :param char_recurrent_dropout: float, dropout rate in RNN char level
         :param recurrent_dropout: float, dropout rate inside RNN
-        :param embedding_dropout: float, dropout rate after embedding layer
         :param rnn_units: int, the number of rnn units
-        :param pre_outlayer_dropout: float, dropout rate before output layer
-        :param char_embed_type: bool, whether to use cnn as character embedding
-        :param crf: bool, whether to use crf or softmax
-        :param conv_layers: list of list, convolution layer settings,
-            relevant when using cnn char embedding
-            each list component consist of 3 length tuple/list that denotes:
-                int, number of filter,
-                int, filter size,
-                int, maxpool size (use -1 to not use maxpooling)
-            each convolution layer is connected directly to embedding layer,
-            character information will be obtained by applying concatenation
-                and GlobalMaxPooling
+        :param embedding_dropout: float, dropout rate after embedding layer
+        :param main_layer_dropout: float, dropout rate in between LSTM
         """
         super(StackedRNNTagger, self).__init__(**kwargs)
         self.word_length = word_length
@@ -117,8 +109,8 @@ class StackedRNNTagger(BaseTagger):
             )
         if self.ed > 0:
             embed_block = Dropout(self.ed)(embed_block)
-
         self.model = embed_block
+        # LSTM Layer
         self.model = Bidirectional(LSTM(
             self.rnn_units, return_sequences=True,
             recurrent_dropout=self.rd
@@ -128,17 +120,25 @@ class StackedRNNTagger(BaseTagger):
             self.rnn_units, return_sequences=True,
             recurrent_dropout=self.rd
         ))(self.model)
-        self.model = Dense(self.n_label+1, activation="relu")(self.model)
         # Dense layer
+        self.model = Dense(self.n_label+1, activation="relu")(self.model)
         self.model = Dense(self.n_label+1)(self.model)
         out = TimeDistributed(
             Dense(self.n_label+1, activation="softmax")
         )(self.model)
+
         self.model = Model(input_layer, out)
         self.model.summary()
         self.model.compile(loss=self.loss, optimizer=self.optimizer)
 
     def __init_transition_matrix(self, y):
+        """
+        Initialized transition matrix for CRF
+
+        :param y: 2D list, label of the dataset
+        :return transition_matrix: numpy array [n_label+1, n_label+1],
+            Transition matrix of the training label
+        """
         n_labels = self.n_label + 1
         self.transition_matrix = np.zeros((n_labels, n_labels))
         for data in y:
@@ -168,6 +168,7 @@ class StackedRNNTagger(BaseTagger):
     def get_char_vector(self, inp_seq):
         """
         Get character vector of the input sequence
+
         :param inp_seq: list of list of string, tokenized input corpus
         :return vector_seq: 3D numpy array, input vector on character level
         """
@@ -188,23 +189,22 @@ class StackedRNNTagger(BaseTagger):
     def vectorize_input(self, inp_seq):
         """
         Prepare vector of the input data
+
         :param inp_seq: list of list of string, tokenized input corpus
-        :return word_vector: 2D numpy array, input vector on word level
-        :return char_vector: 3D numpy array, input vector on character level
-            return None when not using any char_embedding
+        :return word_vector: Dictionary, Word and char input vector
         """
-        input_vector = {}
-        input_vector["word"] = self.get_word_vector(inp_seq)
-        input_vector["char"] = self.get_char_vector(inp_seq)
+        input_vector = {
+            "word": self.get_word_vector(inp_seq),
+            "char": self.get_char_vector(inp_seq)
+        }
         return input_vector
 
     def vectorize_label(self, out_seq):
         """
         Get prepare vector of the label for training
+
         :param out_seq: list of list of string, tokenized input corpus
-        :return out_seq: 2D/3D numpy array, vector of label data
-            return 2D array when using crf
-            return 3D array when not using crf
+        :return out_seq: 3D numpy array, vector of label data
         """
         out_seq = [[self.label2idx[w] for w in s] for s in out_seq]
         out_seq = pad_sequences(
@@ -215,16 +215,13 @@ class StackedRNNTagger(BaseTagger):
         ]
         return np.array(out_seq)
 
-    def devectorize_label(self, pred_sequence, input_data):
-        """
-        Get readable label sequence
-        :param pred_sequence: 4 length list, prediction results from CRF layer
-        :param input_data: list of list of string, tokenized input corpus
-        :return label_seq: list of list of string, readable label sequence
-        """
-        return self.get_greedy_label(pred_sequence, input_data)
-
     def init_training(self, X, y):
+        """
+        Initialized necessary class attributes for training
+
+        :param X: 2D list, training dataset in form of tokenized corpus
+        :param y: 2D list, training data label
+        """
         self.init_l2i(y)
         if self.word2idx is None:
             self.init_w2i(X)
@@ -232,7 +229,7 @@ class StackedRNNTagger(BaseTagger):
         self.init_c2i()
         self.init_model()
 
-    def get_class_param(self, filepath, zipf):
+    def get_class_param(self):
         class_param = {
             "label2idx": self.label2idx,
             "word2idx": self.word2idx,
@@ -247,6 +244,7 @@ class StackedRNNTagger(BaseTagger):
     def init_from_config(class_param):
         """
         Load model from the saved zipfile
+
         :param filepath: path to model zip file
         :return classifier: Loaded model class
         """

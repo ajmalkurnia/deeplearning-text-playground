@@ -36,22 +36,28 @@ class DLHybridTagger(BaseTagger):
         use_crf=True, **kwargs
     ):
         """
-        Deep learning based sequence tagger.
+        Hybrid Deep learning based sequence tagger.
         Consist of:
-            - Char embedding (CNN Optional)
-            - RNN
-            - CRF (Optional)
+            - Char block [CNN, RNN, AdaTransformer (TENER)](Optional)
+            - Main block [RNN, AdaTransformer (TENER)]
+            - Output block [Softmax, CRF]
+
+        CNN-RNN-CRF based on:
+            https://www.aclweb.org/anthology/P16-1101/
+        TENER-TENER-CRF based on:
+            https://arxiv.org/abs/1911.04474
+        RNN-RNN-CRF based on:
+            https://www.aclweb.org/anthology/N16-1030/
 
         :param word_length: int, maximum character length in a token,
-            relevant when using cnn
+            relevant when using char level embedding
+        :param char_embed_type: string, method to get char embedding
+            available option, cnn/rnn/adatrans
+            supply None to not use char embedding
         :param char_embed_size: int, the size of character level embedding,
-            relevant when using cnn
-        :param recurrent_dropout: float, dropout rate inside RNN
-        :param embedding_dropout: float, dropout rate after embedding layer
-        :param rnn_units: int, the number of rnn units
-        :param pre_outlayer_dropout: float, dropout rate before output layer
-        :param char_embed_type: bool, whether to use cnn as character embedding
-        :param crf: bool, whether to use crf or softmax
+            relevant when using char level embedding
+        :param main_layer_type: string, method on main layer (block)
+            available option, rnn/adatrans
         :param conv_layers: list of list, convolution layer settings,
             relevant when using cnn char embedding
             each list component consist of 3 length tuple/list that denotes:
@@ -61,6 +67,38 @@ class DLHybridTagger(BaseTagger):
             each convolution layer is connected directly to embedding layer,
             character information will be obtained by applying concatenation
                 and GlobalMaxPooling
+        :param char_trans_block: int, number of transformer block on char level
+        :param char_trans_head: int, number of attention head on char level
+        :param char_trans_dim_ff: int, ff units in char level transformer
+        :param char_trans_dropout: float, dropout rate in char level
+            transformer
+        :param char_attention_dropout: float, dropout rate for attention on
+            char level transformer
+        :param char_trans_scale: int, attention scaling on char level
+            transformer
+        :param char_rnn_units: int, rnn units on char level
+        :param char_recurrent_dropout: float, dropout rate in char level RNN
+        :param trans_block: int, number of transformer block for main layer
+        :param trans_head: int, number of attention head for main layer
+        :param trans_dim_ff: int, ff units in main layer transformer
+        :param trans_dropout: float, dropout rate in main layer transformer
+        :param attention_dropout: float, dropout rate for attention on
+            main layer transformer
+        :param trans_scale: int, attention scaling on main layer transformer
+        :param trans_attention_dim: int, attention dimension for main layer
+            transformer
+        :param rnn_units: int, number of rnn units
+        :param recurrent_dropout: float, dropout rate in RNN
+        :param embedding_dropout: float, dropout rate after embedding layer
+        :param main_layer_dropout: float, dropout rate after main layer
+        :param fcn_layers: 2D list-like, Fully Connected layer settings,
+            will be placed after conv layer,
+            each list element denotes config for 1 layer,
+                each config consist of 3 length tuple/list that denotes:
+                    int, number of dense unit
+                    float, dropout after dense layer
+                    activation, activation function
+        :param crf: bool, whether to use crf or softmax
         """
         super(DLHybridTagger, self).__init__(**kwargs)
         self.word_length = word_length
@@ -98,6 +136,11 @@ class DLHybridTagger(BaseTagger):
             self.loss = "sparse_categorical_crossentropy"
 
     def char_cnn_block(self, embedding_block):
+        """
+        Initialize character level CNN
+        :param embedding_block: Embedding layer, char embedding layer
+        :return embedding_block: keras.Layer, char embedding block
+        """
         conv_layers = []
         for filter_num, filter_size, pooling_size in self.char_conv_config:
             conv_layer = Conv1D(
@@ -113,11 +156,21 @@ class DLHybridTagger(BaseTagger):
         return embedding_block
 
     def char_rnn_block(self, embedding_block):
+        """
+        Initialize character level RNN
+        :param embedding_block: Embedding layer, char embedding layer
+        :return embedding_block: keras.Layer, char embedding block
+        """
         return Bidirectional(
             LSTM(self.char_rnn_units, recurrent_dropout=self.char_rd)
         )(embedding_block)
 
     def char_trans_block(self, embedding_block):
+        """
+        Initialize character level Adaptive Transformer (TENER)
+        :param embedding_block: Embedding layer, char embedding layer
+        :return embedding_block: keras.Layer, char embedding block
+        """
         for _ in range(self.char_trans_block):
             embedding_block = TransformerBlock(
                 self.char_trans_dim_ff, self.char_trans_head,
@@ -164,6 +217,11 @@ class DLHybridTagger(BaseTagger):
         return seq_inp_layer, embedding_block
 
     def main_rnn_block(self, embed_block):
+        """
+        Initialize RNN main layer
+        :param embed_block: embedding layer, word/concat word+char
+        :param main_layer: Bidirectional LSTM layer
+        """
         main_layer = Bidirectional(LSTM(
             units=self.rnn_units, return_sequences=True,
             recurrent_dropout=self.rd,
@@ -171,6 +229,11 @@ class DLHybridTagger(BaseTagger):
         return main_layer
 
     def main_trans_block(self, embed_block):
+        """
+        Initialize Adaptive Transformer (TENER) main layer
+        :param embed_block: embedding layer, word/concat word+char
+        :param main_layer: TENER
+        """
         main_layer = Dense(self.trans_attention_dim)(embed_block)
         for _ in range(self.trans_blocks):
             main_layer = TransformerBlock(
@@ -202,16 +265,17 @@ class DLHybridTagger(BaseTagger):
         else:
             embed_block = word_embed_block
             input_layer = input_word_layer
+        # Main layer
         if self.main_layer_type == "rnn":
             self.model = self.main_rnn_block(embed_block)
         elif self.main_layer_type == "adatrans":
             self.model = self.main_trans_block(embed_block)
-
+        # FCN layer
         self.model = Dropout(self.main_layer_dropout)(self.model)
         for units, do_rate, activation in self.fcn_layers:
             self.model = Dense(units, activation=activation)(self.model)
             self.model = Dropout(do_rate)(self.model)
-
+        # Output Layer
         if self.use_crf:
             crf = CRF(
                 self.n_label+1,
@@ -232,6 +296,13 @@ class DLHybridTagger(BaseTagger):
         self.model.compile(loss=self.loss, optimizer=self.optimizer)
 
     def __init_transition_matrix(self, y):
+        """
+        Initialized transition matrix for CRF
+
+        :param y: 2D list, label of the dataset
+        :return transition_matrix: numpy array [n_label+1, n_label+1],
+            Transition matrix of the training label
+        """
         n_labels = self.n_label + 1
         self.transition_matrix = np.zeros((n_labels, n_labels))
         for data in y:
@@ -282,9 +353,9 @@ class DLHybridTagger(BaseTagger):
         """
         Prepare vector of the input data
         :param inp_seq: list of list of string, tokenized input corpus
-        :return word_vector: 2D numpy array, input vector on word level
-        :return char_vector: 3D numpy array, input vector on character level
-            return None when not using any char_embedding
+        :return input_vector: Dictionary/np.array, Word and char input vector
+            return dictionary when using character embedding
+            return np.array when not using character embedding
         """
         input_vector = {}
         input_vector["word"] = self.get_word_vector(inp_seq)
@@ -337,7 +408,9 @@ class DLHybridTagger(BaseTagger):
     def devectorize_label(self, pred_sequence, input_data):
         """
         Get readable label sequence
-        :param pred_sequence: 4 length list, prediction results from CRF layer
+        :param pred_sequence: np.array/list, prediction results from out layer
+            np.array when using softmax
+            list when using CRF
         :param input_data: list of list of string, tokenized input corpus
         :return label_seq: list of list of string, readable label sequence
         """
@@ -347,6 +420,12 @@ class DLHybridTagger(BaseTagger):
             return self.get_greedy_label(pred_sequence, input_data)
 
     def init_training(self, X, y):
+        """
+        Initialized necessary class attributes for training
+
+        :param X: 2D list, training dataset in form of tokenized corpus
+        :param y: 2D list, training data label
+        """
         self.init_l2i(y)
         if self.word2idx is None:
             self.init_w2i(X)
@@ -359,6 +438,12 @@ class DLHybridTagger(BaseTagger):
         self.init_model()
 
     def save_crf(self, filepath, zipf):
+        """
+        Saving CRF model
+
+        :param filepath: string, zip file path
+        :param zipf: zipfile
+        """
         for dirpath, dirs, files in os.walk(filepath):
             if files == []:
                 zipf.write(
@@ -369,6 +454,12 @@ class DLHybridTagger(BaseTagger):
                 zipf.write(fn, "/".join(fn.split("/")[3:]))
 
     def save_network(self, filepath, zipf):
+        """
+        Saving keras model
+
+        :param filepath: string, save file path
+        :param zipf: zipfile
+        """
         if self.use_crf:
             self.model.save(filepath[:-5], save_format="tf")
             self.save_crf(filepath[:-5], zipf)
@@ -376,7 +467,7 @@ class DLHybridTagger(BaseTagger):
             self.model.save(filepath)
             zipf.write(filepath, filepath.split("/")[-1])
 
-    def get_class_param(self, filepath, zipf):
+    def get_class_param(self):
         class_param = {
             "label2idx": self.label2idx,
             "word2idx": self.word2idx,

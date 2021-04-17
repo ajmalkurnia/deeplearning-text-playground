@@ -23,13 +23,31 @@ class TENERTagger(BaseTagger):
         out_transformer_dropout=0.3, scale=1, **kwargs
     ):
         """
-        Transformer classifier's construction method
-            :param n_blocks: int, number of transformer stack
-            :param dim_ff: int, hidden unit on fcn layer in transformer
-            :param dropout: float, dropout value
-            :param n_heads: int, number of attention heads
-            :param attention_dim: int, number of attention dimension
-                this value will be overidden if using custom embedding matrix
+        TENER tagger based on:
+        https://arxiv.org/abs/1911.04474
+        https://github.com/fastnlp/TENER
+        (note. still not sure if this is accurate)
+
+        :param word_length: int, number of characters in a word
+        :param char_embed_size: int, character embedding size
+        :param char_heads: int, number of attention head on char level
+        :param char_dim_ff: int, ff unit for char level transformer
+        :param n_blocks: int, number of transformer stack
+        :param dim_ff: int, hidden unit on fcn layer in transformer
+        :param n_heads: int, number of attention heads
+        :param attention_dim: int, number of unit for transformer in and out
+        :param fcn_layers: 2D list-like, Fully Connected layer settings,
+            each list element denotes config for 1 layer,
+                each config consist of 3 length tuple/list that denotes:
+                    int, number of dense unit
+                    float, dropout after dense layer
+                    activation, activation function
+        :param transformer_dropout: float, dropout rate inside transformer
+        :param attention_dropout: float, dropout rate on multi head attention
+        :param embedding_dropout: float, dropout rate after embedding
+        :param out_transformer_dropout: float, dropout rate after
+            transformer block
+        :param scale: float, attention scaling 1/None
         """
         # self.__doc__ = BaseClassifier.__doc__
         super(TENERTagger, self).__init__(**kwargs)
@@ -82,6 +100,9 @@ class TENERTagger(BaseTagger):
         return seq_inp_layer, embedding_block
 
     def init_model(self):
+        """
+        Initialize TENER model architecture
+        """
         input_word_layer = Input(shape=(self.seq_length,), name="word")
         word_embed_block = Embedding(
             self.vocab_size+1, self.word_embed_size,
@@ -117,6 +138,13 @@ class TENERTagger(BaseTagger):
         self.model.compile(optimizer=self.optimizer, loss=self.loss)
 
     def __init_transition_matrix(self, y):
+        """
+        Initialized transition matrix for CRF
+
+        :param y: 2D list, label of the dataset
+        :return transition_matrix: numpy array [n_label+1, n_label+1],
+            Transition matrix of the training label
+        """
         n_labels = self.n_label + 1
         self.transition_matrix = np.zeros((n_labels, n_labels))
         for data in y:
@@ -146,6 +174,7 @@ class TENERTagger(BaseTagger):
     def get_char_vector(self, inp_seq):
         """
         Get character vector of the input sequence
+
         :param inp_seq: list of list of string, tokenized input corpus
         :return vector_seq: 3D numpy array, input vector on character level
         """
@@ -166,24 +195,22 @@ class TENERTagger(BaseTagger):
     def vectorize_input(self, inp_seq):
         """
         Prepare vector of the input data
+
         :param inp_seq: list of list of string, tokenized input corpus
-        :return word_vector: 2D numpy array, input vector on word level
-        :return char_vector: 3D numpy array, input vector on character level
-            return None when not using any char_embedding
+        :return input_vector: Dictionary, Word and char input vector
         """
-        input_vector = {}
-        input_vector["word"] = self.get_word_vector(inp_seq)
-        input_vector["char"] = self.get_char_vector(inp_seq)
-        # input_vector = input_vector["word"]
+        input_vector = {
+            "word": self.get_word_vector(inp_seq),
+            "char": self.get_char_vector(inp_seq)
+        }
         return input_vector
 
     def vectorize_label(self, out_seq):
         """
         Get prepare vector of the label for training
+
         :param out_seq: list of list of string, tokenized input corpus
-        :return out_seq: 2D/3D numpy array, vector of label data
-            return 2D array when using crf
-            return 3D array when not using crf
+        :return out_seq: 2D numpy array, vector of label data
         """
         out_seq = [[self.label2idx[w] for w in s] for s in out_seq]
         out_seq = pad_sequences(
@@ -194,6 +221,7 @@ class TENERTagger(BaseTagger):
     def get_crf_label(self, pred_sequence, input_data):
         """
         Get label sequence
+
         :param pred_sequence: 4 length list, prediction results from CRF layer
         :param input_data: list of list of string, tokenized input corpus
         :return label_seq: list of list of string, readable label sequence
@@ -215,6 +243,7 @@ class TENERTagger(BaseTagger):
     def devectorize_label(self, pred_sequence, input_data):
         """
         Get readable label sequence
+
         :param pred_sequence: 4 length list, prediction results from CRF layer
         :param input_data: list of list of string, tokenized input corpus
         :return label_seq: list of list of string, readable label sequence
@@ -222,6 +251,12 @@ class TENERTagger(BaseTagger):
         return self.get_crf_label(pred_sequence, input_data)
 
     def init_training(self, X, y):
+        """
+        Initialized necessary class attributes for training
+
+        :param X: 2D list, training dataset in form of tokenized corpus
+        :param y: 2D list, training data label
+        """
         self.init_l2i(y)
         if self.word2idx is None:
             self.init_w2i(X)
@@ -232,6 +267,12 @@ class TENERTagger(BaseTagger):
         self.init_model()
 
     def save_crf(self, filepath, zipf):
+        """
+        Saving CRF model
+
+        :param filepath: string, zip file path
+        :param zipf: zipfile
+        """
         for dirpath, dirs, files in os.walk(filepath):
             if files == []:
                 zipf.write(
@@ -242,12 +283,14 @@ class TENERTagger(BaseTagger):
                 zipf.write(fn, "/".join(fn.split("/")[3:]))
 
     def save_network(self, filepath, zipf):
-        if self.use_crf:
-            self.model.save(filepath[:-5], save_format="tf")
-            self.save_crf(filepath[:-5], zipf)
-        else:
-            self.model.save(filepath)
-            zipf.write(filepath, filepath.split("/")[-1])
+        """
+        Saving keras model
+
+        :param filepath: string, save file path
+        :param zipf: zipfile
+        """
+        self.model.save(filepath[:-5], save_format="tf")
+        self.save_crf(filepath[:-5], zipf)
 
     def get_class_param(self, filepath, zipf):
         class_param = {
@@ -256,11 +299,8 @@ class TENERTagger(BaseTagger):
             "seq_length": self.seq_length,
             "word_length": self.word_length,
             "idx2label": self.idx2label,
-            "use_crf": self.use_crf,
-            "use_cnn": self.use_cnn
+            "char2idx": self.char2idx
         }
-        if self.use_cnn:
-            class_param["char2idx"] = self.char2idx
         return class_param
 
     @staticmethod
@@ -272,15 +312,12 @@ class TENERTagger(BaseTagger):
         """
         constructor_param = {
             "seq_length": class_param["seq_length"],
-            "word_length": class_param["word_length"],
-            "use_crf": class_param["use_crf"],
-            "use_cnn": class_param["use_cnn"]
+            "word_length": class_param["word_length"]
         }
         classifier = TENERTagger(**constructor_param)
         classifier.label2idx = class_param["label2idx"]
         classifier.word2idx = class_param["word2idx"]
         classifier.idx2label = class_param["idx2label"]
         classifier.n_label = len(classifier.label2idx)
-        if "char2idx" in class_param:
-            classifier.char2idx = class_param["char2idx"]
+        classifier.char2idx = class_param["char2idx"]
         return classifier

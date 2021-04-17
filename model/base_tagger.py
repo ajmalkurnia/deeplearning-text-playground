@@ -147,8 +147,6 @@ class BaseTagger():
         Prepare vector of the input data
         :param inp_seq: list of list of string, tokenized input corpus
         :return word_vector: 2D numpy array, input vector on word level
-        :return char_vector: 3D numpy array, input vector on character level
-            return None when not using any char_embedding
         """
         word_vector = self.get_word_vector(inp_seq)
         return word_vector
@@ -157,9 +155,7 @@ class BaseTagger():
         """
         Get prepare vector of the label for training
         :param out_seq: list of list of string, tokenized input corpus
-        :return out_seq: 2D/3D numpy array, vector of label data
-            return 2D array when using crf
-            return 3D array when not using crf
+        :return out_seq: 3D numpy array, vector of label data
         """
         out_seq = [[self.label2idx[w] for w in s] for s in out_seq]
         out_seq = pad_sequences(
@@ -189,7 +185,7 @@ class BaseTagger():
     def devectorize_label(self, pred_sequence, input_data):
         """
         Get readable label sequence
-        :param pred_sequence: 4 length list, prediction results from CRF layer
+        :param pred_sequence: 3D numpy array, prediction results from out layer
         :param input_data: list of list of string, tokenized input corpus
         :return label_seq: list of list of string, readable label sequence
         """
@@ -211,6 +207,12 @@ class BaseTagger():
         return X_input, vector_y
 
     def init_training(self, X, y):
+        """
+        Initialized necessary class attributes for training
+
+        :param X: 2D list, training dataset in form of tokenized corpus
+        :param y: 2D list, training data label
+        """
         self.init_l2i(y)
         if self.word2idx is None:
             self.init_w2i(X)
@@ -267,12 +269,22 @@ class BaseTagger():
         return label_result
 
     def save_class(self, filepath, zipf):
+        """
+        Save necessary class attributes
+        :param filepath: string, save file path
+        :param zipf: ZipFile
+        """
         class_param = self.get_class_param()
         with open(filepath, "wb") as pkl:
             pickle.dump(class_param, pkl)
         zipf.write(filepath, filepath.split("/")[-1])
 
     def save_network(self, filepath, zipf):
+        """
+        Save keras model
+        :param filepath: string, save file path
+        :param zipf: ZipFile
+        """
         self.model.save(filepath)
         zipf.write(filepath, filepath.split("/")[-1])
 

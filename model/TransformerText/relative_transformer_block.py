@@ -11,9 +11,13 @@ class RelativeMultiAttention(Layer):
         self, n_heads, dim_head, attention_do=0.5, scale=None, **kwargs
     ):
         """
-        Initialize multi head attention layer
+        Initialize Relative multi head attention layer
+        Based on:
+        https://arxiv.org/abs/1911.04474
+
         :param n_heads: int, number of attention heads
         :param dim_head: int, length of query, key, and value for each head
+        :param attention_do: float, dropout rate for attention
         """
         super(RelativeMultiAttention, self).__init__(**kwargs)
         self.n_heads = n_heads
@@ -153,9 +157,10 @@ class TransformerBlock(Layer):
         """
         Initialize a transformer layer
         :param dim_ff: int, the size of hidden ffn unit
-        :param dropout: float, dropout rate value
         :param n_heads: int, number of heads
         :param embed_dim: int, attention length (embedding length)
+        :param transformer_dropout: float, dropout rate value
+        :param attention_dropout: float, dropout rate in multi head attention
         """
         super(TransformerBlock, self).__init__(**kwargs)
         self.dim_ff = dim_ff
