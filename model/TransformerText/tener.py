@@ -16,7 +16,7 @@ class TENERTagger(BaseCRFTagger):
         char_dim_ff=60, n_blocks=2, dim_ff=128, n_heads=6,
         attention_dim=256, fcn_layers=[(512, 0.3, "relu")],
         transformer_dropout=0.3, attention_dropout=0.5, embedding_dropout=0.5,
-        out_transformer_dropout=0.3, scale=1, **kwargs
+        out_transformer_dropout=0.3, scale=False, **kwargs
     ):
         """
         TENER tagger based on:

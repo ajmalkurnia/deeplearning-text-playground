@@ -71,7 +71,7 @@ ARCHITECTURE_CONFIG = {
             "char_trans_dim_ff": 60,
             "char_trans_dropout": 0.3,
             "char_attention_dropout": 0.5,
-            "char_trans_scale": 1,
+            "char_trans_scale": False,
             "char_rnn_units": 25,
             "char_recurrent_dropout": 0.33,
             "trans_blocks": 2,
@@ -79,7 +79,7 @@ ARCHITECTURE_CONFIG = {
             "trans_dim_ff": 256,
             "trans_dropout": 0.5,
             "attention_dropout": 0.5,
-            "trans_scale": 1,
+            "trans_scale": False,
             "trans_attention_dim": 256,
             "recurrent_dropout": 0.5,
             "rnn_units": 100,
@@ -123,7 +123,7 @@ ARCHITECTURE_CONFIG = {
             "embedding_dropout": 0.5,
             "fcn_layers": [(512, 0.3, "relu")],
             "out_transformer_dropout": 0.3,
-            "scale": 1
+            "scale": False
         }
     }
 }

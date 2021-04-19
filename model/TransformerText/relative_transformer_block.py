@@ -8,7 +8,7 @@ import tensorflow as tf
 
 class RelativeMultiAttention(Layer):
     def __init__(
-        self, n_heads, dim_head, attention_do=0.5, scale=None, **kwargs
+        self, n_heads, dim_head, attention_do=0.5, scale=False, **kwargs
     ):
         """
         Initialize Relative multi head attention layer
@@ -24,9 +24,9 @@ class RelativeMultiAttention(Layer):
         self.dim_head = dim_head
         self.attention_do = attention_do
         if scale:
-            self.scale = scale
-        else:
             self.scale = tf.sqrt(float(self.dim_head))
+        else:
+            self.scale = 1
         # Init relative embedding
 
     def build(self, input_shape):
@@ -152,7 +152,7 @@ class RelativeMultiAttention(Layer):
 class TransformerBlock(Layer):
     def __init__(
         self, dim_ff, n_heads, embed_dim, transformer_dropout=0.5,
-        attention_dropout=0.5, scale=None, **kwargs
+        attention_dropout=0.5, scale=False, **kwargs
     ):
         """
         Initialize a transformer layer
