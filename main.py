@@ -1,23 +1,12 @@
 import logging
 from common.demo_args import get_args
 from common.data import DATASET
-from demo.classification import rnn_classify_demo, cnn_classify_demo
-from demo.classification import transformer_classify_demo, han_classify_demo
-from demo.classification import rcnn_classify_demo
-from demo.tagger import hybrid_tag_demo, cnn_tag_demo, idcnn_tag_demo
-from demo.tagger import tener_tag_demo, rnn_rnn_tag_demo
+from demo import classify
+from demo import tagging
 
 DEMOS = {
-    "rnn-classification": rnn_classify_demo,
-    "cnn-classification": cnn_classify_demo,
-    "transformer-classification": transformer_classify_demo,
-    "han-classification": han_classify_demo,
-    "rcnn-classification": rcnn_classify_demo,
-    "hybrid-tagger": hybrid_tag_demo,
-    "cnn-seq-tagger": cnn_tag_demo,
-    "idcnn-tagger": idcnn_tag_demo,
-    "tener-tagger": tener_tag_demo,
-    "rnn-attention-tagger": rnn_rnn_tag_demo
+    "classify": classify,
+    "tagger": tagging,
 }
 
 
@@ -48,13 +37,9 @@ def main(args):
 
     try:
         data = DATASET[args.task](args)
+        demo = DEMOS[data.TASK]
     except KeyError:
-        raise KeyError("Invalid Task")
-
-    try:
-        demo = DEMOS[f"{args.architecture}-{data.TASK}"]
-    except KeyError:
-        raise KeyError("Invalid architecture or the dataset is not compatible with this architecture")  # noqa
+        raise KeyError("Invalid dataset")
 
     demo.main(args, data)
 
