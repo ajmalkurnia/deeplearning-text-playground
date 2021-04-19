@@ -54,6 +54,21 @@ def base_embedding_args(parser):
     return parser
 
 
+def base_train_args(parser):
+    group = parser.add_argument_group("Training parameter")
+    group.add_argument(
+        "-b", "--batchsize", type=int, default=128,
+        help="Training batch size"
+    )
+    group.add_argument(
+        "-e", "--epoch", type=int, default=100,
+        help="Training epoch"
+    )
+    group.add_argument(
+        "-c", "--checkpoint", type=str, help="Checkpoint path"
+    )
+
+
 def hybrid_tagger_args(subparser):
     hybrid_tag_parser = subparser.add_parser(
         "hybrid", help="Run Hybrid Model"
