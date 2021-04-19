@@ -45,7 +45,8 @@ def main(args, data):
         class_parameter = get_config(data, args)
         tagger = tagger(**class_parameter)
         tagger.train(
-            train[0], train[1], args.epoch, valid
+            train[0], train[1], args.epoch, args.batchsize, valid,
+            args.checkpoint
         )
     logging.info("Prediction")
     y_pred = tagger.predict(test[0])

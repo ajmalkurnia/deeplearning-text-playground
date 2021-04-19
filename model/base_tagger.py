@@ -2,7 +2,7 @@ from keras.utils import to_categorical
 from keras.initializers import Constant
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import load_model
-from keras.callbacks import EarlyStopping
+from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 from common.word_vector import WE_TYPE
 
@@ -253,13 +253,16 @@ class BaseTagger():
         self.init_embedding()
         self.init_model()
 
-    def train(self, X, y, n_epoch=10, valid_split=None, batch_size=128):
+    def train(
+        self, X, y, epoch=10, batch_size=128, validation_pair=None,
+        ckpoint_file=None
+    ):
         """
         Prepare input and label data for the input
         :param X: list of list of string, tokenized input corpus
         :param y: list of list of string, label sequence
-        :param n_epoch: int, number of training epoch
-        :param valid_split: tuple, validation data
+        :param epoch: int, number of training epoch
+        :param validation_pair: tuple, validation data
             shape: (X_validation, y_validation)
         :param batch_size: int, size of the batch
         :return history: output of the fit method
@@ -267,8 +270,11 @@ class BaseTagger():
         self.training_prep(X, y)
 
         X_train, y_train = self.prepare_data(X, y)
-        if valid_split:
-            valid_split = self.prepare_data(valid_split[0], valid_split[1])
+        callback = []
+        if validation_pair:
+            validation_pair = self.prepare_data(
+                validation_pair[0], validation_pair[1]
+            )
             es = EarlyStopping(
                 monitor="val_loss",
                 patience=10,
@@ -276,15 +282,20 @@ class BaseTagger():
                 mode="min",
                 restore_best_weights=True
             )
-            callback = [es]
-        else:
-            callback = []
+            callback.append(es)
+            if ckpoint_file:
+                checkpoint = ModelCheckpoint(
+                    ckpoint_file, monitor='val_accuracy', verbose=1,
+                    save_best_only=True, mode='max', period=2
+                )
+                callback.append(checkpoint)
+
         history = self.model.fit(
             X_train,
             y_train,
             batch_size=batch_size,
-            epochs=n_epoch,
-            validation_data=valid_split,
+            epochs=epoch,
+            validation_data=validation_pair,
             verbose=1,
             callbacks=callback
         )
