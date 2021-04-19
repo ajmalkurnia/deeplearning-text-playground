@@ -12,6 +12,11 @@ def get_args():
     subparser = transformer_args(subparser)
     subparser = han_args(subparser)
     subparser = rcnn_args(subparser)
+    subparser = hybrid_tagger_args(subparser)
+    subparser = cnn_tagger_args(subparser)
+    subparser = idcnn_tagger_args(subparser)
+    subparser = tener_tagger_args(subparser)
+    subparser = rnn_rnn_tagger_args(subparser)
     return parser
 
 
@@ -23,8 +28,9 @@ def base_args(parser):
     parser.add_argument(
         "-t", "--task", type=str, help="Tasks", required=True,
         choices={
-            "emotion_id", "news_category_id",
-            "sentiment_en", "news_category_en", "fake_news_en"
+            "emotion_id", "news_category_id", "postag_id", "postag_ud_id",
+            "ner_id", "sentiment_en", "news_category_en", "fake_news_en",
+            "postag_en", "ner_en",
         }
     )
     parser.add_argument(
@@ -154,5 +160,190 @@ def rcnn_args(subparser):
     rcnn_parser.add_argument(
         "--convfilter", type=int, help="Number of convolution filter",
         default=128
+    )
+    return subparser
+
+
+def hybrid_tagger_args(subparser):
+    hybrid_tag_parser = subparser.add_parser(
+        "hybrid", help="Run Hybrid Model"
+    )
+    hybrid_tag_parser.add_argument(
+        "--charlayer", type=str, help="Main Layer settings",
+        choices={"cnn", "rnn", "adatrans"}
+    )
+    hybrid_tag_parser.add_argument(
+        "--mainlayer", type=str, help="Main Layer settings",
+        choices={"rnn", "adatrans"}, default="rnn", required=True
+    )
+    hybrid_tag_parser.add_argument(
+        "--outlayer", type=str, help="Main Layer settings",
+        choices={"crf", "softmax"}, default="crf", required=True
+    )
+    group1 = hybrid_tag_parser.add_argument_group("Char RNN Settings")
+    group1.add_argument(
+        "--charrnnunits", type=int, help="RNN unit on char Level", default=25
+    )
+    group1.add_argument(
+        "--charrnndropout", type=float, help="Dropout rate in char-RNN",
+        default=0.5
+    )
+    group2 = hybrid_tag_parser.add_argument_group("Char AdaTrans Settings")
+    group2.add_argument(
+        "--chartransblocks", type=int, help="Char-transfomer blocks", default=2
+    )
+    group2.add_argument(
+        "--chartransheads", type=int, help="Char-transfomer attention heads",
+        default=8
+    )
+    group2.add_argument(
+        "--chartransdimff", type=int, help="Char-transfomer ff dimension",
+        default=256
+    )
+    group2.add_argument(
+        "--chartransdropout", type=float, help="Char-transfomer dropout",
+        default=0.5
+    )
+    group2.add_argument(
+        "--chartransattdropout", type=float,
+        help="Char-transfomer attention dropout", default=0.5
+    )
+    group2.add_argument(
+        "--chartransscale", type=int, help="Char-transfomer attention scaling",
+        default=1
+    )
+    group3 = hybrid_tag_parser.add_argument_group("Main RNN Settings")
+    group3.add_argument(
+        "--rnnunits", type=int, help="RNN unit on word Level", default=100
+    )
+    group3.add_argument(
+        "--rnndropout", type=float, help="Dropout rate in RNN", default=0.5
+    )
+    group4 = hybrid_tag_parser.add_argument_group("Main AdaTrans Settings")
+    group4.add_argument(
+        "--transblocks", type=int, help="Transfomer blocks", default=2
+    )
+    group4.add_argument(
+        "--transheads", type=int, help="Transfomer attention heads",
+        default=8
+    )
+    group4.add_argument(
+        "--transdimff", type=int, help="Transfomer ff dimension",
+        default=256
+    )
+    group4.add_argument(
+        "--transdropout", type=float, help="Transfomer dropout",
+        default=0.5
+    )
+    group4.add_argument(
+        "--transattdropout", type=float,
+        help="Transfomer attention dropout", default=0.5
+    )
+    group4.add_argument(
+        "--transscale", type=int, help="Transfomer attention scaling",
+        default=1
+    )
+    group4.add_argument(
+        "--transattdim", type=int, help="Transormer attention dimension",
+        default=256
+    )
+    return subparser
+
+
+def cnn_tagger_args(subparser):
+    cnn_sub_parser = subparser.add_parser(
+        "cnn-seq", help="Run CNN Model"
+    )
+    cnn_sub_parser.add_argument(
+        "--embeddingdropout", type=float, help="Dropout rate after embedding",
+        default=0.5
+    )
+    cnn_sub_parser.add_argument(
+        "--preoutputdropout", type=float, help="Dropout rate before output",
+        default=0.5
+    )
+    return subparser
+
+
+def idcnn_tagger_args(subparser):
+    idcnn_subparser = subparser.add_parser(
+        "idcnn", help="Run CNN Model"
+    )
+    idcnn_subparser.add_argument(
+        "--embeddingdropout", type=float, help="Dropout rate after embedding",
+        default=0.5
+    )
+    idcnn_subparser.add_argument(
+        "--blockdropout", type=float, help="Dropout rate at the end of blocks",
+        default=0.5
+    )
+    idcnn_subparser.add_argument(
+        "--repeat", type=int, help="Repeat block x times",
+        default=1
+    )
+    return subparser
+
+
+def tener_tagger_args(subparser):
+    tener_tag_parser = subparser.add_parser(
+        "tener", help="Run TENER Model"
+    )
+    tener_tag_parser.add_argument(
+        "--nblocks", type=int, help="Transformer block", default=2
+    )
+    tener_tag_parser.add_argument(
+        "--nheads", type=int, help="Attention Heads", default=8
+    )
+    tener_tag_parser.add_argument(
+        "--dimff", type=int, help="Feed forward unit inside transformer",
+        default=256
+    )
+    tener_tag_parser.add_argument(
+        "--attentiondim", type=int, help="Unit inside attention",
+        default=256
+    )
+    tener_tag_parser.add_argument(
+        "--transformerdropout", type=float, help="Dropout rate in Transformer",
+        default=0.5
+    )
+    tener_tag_parser.add_argument(
+        "--attentiondropout", type=float, help="Dropout rate in HeadAttention",
+        default=0.5
+    )
+    tener_tag_parser.add_argument(
+        "--embeddingdropout", type=float, help="Dropout rate after embedding",
+        default=0.5
+    )
+    tener_tag_parser.add_argument(
+        "--outtransformerdropout", type=float,
+        help="Dropout rate after transformer", default=0.5
+    )
+    return subparser
+
+
+def rnn_rnn_tagger_args(subparser):
+    rnn_tag_parser = subparser.add_parser(
+        "rnn-attention", help="Run RNN-Attention-RNN Model"
+    )
+    rnn_tag_parser.add_argument(
+        "--charembedsize", type=int, default=100,
+    )
+    rnn_tag_parser.add_argument(
+        "--charrnnunits", type=int, default=400,
+    )
+    rnn_tag_parser.add_argument(
+        "--rnnunits", type=int, default=400,
+    )
+    rnn_tag_parser.add_argument(
+        "--charrecurrentdropout", type=float, default=0.33,
+    )
+    rnn_tag_parser.add_argument(
+        "--recurrentdropout", type=float, default=0.33,
+    )
+    rnn_tag_parser.add_argument(
+        "--embeddingdropout", type=float, default=0.5,
+    )
+    rnn_tag_parser.add_argument(
+        "--mainlayerdropouts", type=float, default=0.5
     )
     return subparser

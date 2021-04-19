@@ -10,9 +10,8 @@ from common.utils import split_data
 
 class Dataset():
     def __init__(self, args):
-        # self.tasks = args.task
-        self.path = args
-        # self.arch = args.architecture
+        self.path = args.datapath
+        self.arch = args.architecture
 
     def get_data(self):
         raise NotImplementedError()
@@ -34,7 +33,7 @@ class Dataset():
 
 class EmotionID(Dataset):
     LANG = "id"
-    TASK = "sentence classification"
+    TASK = "classification"
 
     def __init__(self, args):
         super(EmotionID, self).__init__(args)
@@ -73,7 +72,7 @@ class EmotionID(Dataset):
 
 class IndoSum(Dataset):
     LANG = "id"
-    TASK = "document_classification"
+    TASK = "classification"
 
     def __init__(self, args):
         super(IndoSum, self).__init__(args)
@@ -149,7 +148,7 @@ class IndoSum(Dataset):
 
 class POSTagID(Dataset):
     LANG = "id"
-    TASK = "sequence labelling"
+    TASK = "tagger"
 
     def open_data(self, path):
         data = []
@@ -168,18 +167,24 @@ class POSTagID(Dataset):
                     "tokenized_text": token_sequence,
                     "tag": tag_sequenece
                 })
-        return pd.DataFrame(data)
+        return data
 
     def get_data(self):
         path = f"{self.path}/Indonesian_Manually_Tagged_Corpus_ID.tsv"
         df = self.open_data(path)
-        data = split_data((df["tokenized_text"], df["tag"]))
+        X = [row["tokenized_text"] for row in df]
+        y = [row["tag"] for row in df]
+
+        data = split_data((X, y))
         return data
+
+    def get_sequence_length(self):
+        return 90
 
 
 class POSTagUDID(Dataset):
     LANG = "id"
-    TASK = "Sequence labelling"
+    TASK = "tagger"
 
     def __init__(self, args):
         super(POSTagUDID, self).__init__(args)
@@ -203,25 +208,30 @@ class POSTagUDID(Dataset):
                     })
                     token_sequence = []
                     tag_sequence = []
-        return pd.DataFrame(data)
+        return data
 
     def get_data(self):
         files = glob(f"{self.path}/*.conllu")
         data = [None] * 3
         for filen in files:
             df = self.open_data(filen)
+            X = [row["tokenized_text"] for row in df]
+            y = [row["tag"] for row in df]
             if "dev" in filen:
-                data[2] = (df["tokenized_text"], df["tag"])
+                data[2] = (X, y)
             elif "test" in filen:
-                data[1] = (df["tokenized_text"], df["tag"])
+                data[1] = (X, y)
             elif "train" in filen:
-                data[0] = (df["tokenized_text"], df["tag"])
+                data[0] = (X, y)
         return data
+
+    def get_sequence_length(self):
+        return 190
 
 
 class NERID(Dataset):
     LANG = "id"
-    TASK = "Sequence labelling"
+    TASK = "tagger"
 
     def __init__(self, args):
         super(NERID, self).__init__(args)
@@ -245,25 +255,30 @@ class NERID(Dataset):
                     })
                     token_sequence = []
                     tag_sequence = []
-        return pd.DataFrame(data)
+        return data
 
     def get_data(self):
         files = glob(f"{self.path}/*.txt")
         data = [None] * 3
         for filen in files:
             df = self.open_data(filen)
+            X = [row["tokenized_text"] for row in df]
+            y = [row["tag"] for row in df]
             if "dev" in filen:
-                data[2] = (df["tokenized_text"], df["tag"])
+                data[2] = (X, y)
             elif "test" in filen:
-                data[1] = (df["tokenized_text"], df["tag"])
+                data[1] = (X, y)
             elif "train" in filen:
-                data[0] = (df["tokenized_text"], df["tag"])
+                data[0] = (X, y)
         return data
+
+    def get_sequence_length(self):
+        return 75
 
 
 class IMDB(Dataset):
     LANG = "en"
-    TASK = "Document classification"
+    TASK = "classification"
 
     def __init__(self, args):
         super(IMDB, self).__init__(args)
@@ -313,7 +328,7 @@ class IMDB(Dataset):
 
 class AGNews(Dataset):
     LANG = "en"
-    TASK = "Short document/sentence Classification"
+    TASK = "classification"
 
     def __init__(self, args):
         super(AGNews, self).__init__(args)
@@ -348,7 +363,7 @@ class AGNews(Dataset):
 
 class LIAR(Dataset):
     LANG = "en"
-    TASK = "Sentence Classification"
+    TASK = "classification"
 
     def __init__(self, args):
         super(LIAR, self).__init__(args)
@@ -379,7 +394,7 @@ class LIAR(Dataset):
 
 class NEREN(Dataset):
     LANG = "en"
-    TASK = "Sequence Labelling"
+    TASK = "tagger"
 
     def __init__(self, args):
         super(NEREN, self).__init__(args)
@@ -402,20 +417,25 @@ class NEREN(Dataset):
                     })
                     token_sequence = []
                     tag_sequenece = []
-        return pd.DataFrame(data)
+        return data
 
     def get_data(self):
         files = glob(f"{self.path}/*.conll")
         data = [None] * 3
         for filen in files:
             df = self.open_data(filen)
+            X = [row["tokenized_text"] for row in df]
+            y = [row["tag"] for row in df]
             if "dev" in filen:
-                data[2] = (df["tokenized_text"], df["tag"])
+                data[2] = (X, y)
             elif "test" in filen:
-                data[1] = (df["tokenized_text"], df["tag"])
+                data[1] = (X, y)
             elif "train" in filen:
-                data[0] = (df["tokenized_text"], df["tag"])
+                data[0] = (X, y)
         return data
+
+    def get_sequence_length(self):
+        return 105
 
 
 DATASET = {

@@ -182,3 +182,32 @@ class Attention(Layer):
         config["score"] = self.score
         config["penalty"] = self.penalty
         return config
+
+
+class CharTagAttention(Layer):
+    def __init__(self, feature, max_length, **kwargs):
+        """
+        Attention for Tagger from:
+        https://www.aclweb.org/anthology/K17-3002/
+
+        :param feature: int, Attention units
+        :param max_length: int, maximum input length
+        """
+        super(CharTagAttention, self).__init__(**kwargs)
+        self.feature = feature
+        self.maxlen = max_length
+
+    def build(self, input_shape):
+        self.W = Dense(self.feature, use_bias=False)
+
+    def call(self, query, mask):
+        att_score = self.W(query)
+        att_score = Activation("softmax")(att_score)
+        att_mat = Dot(axes=[1, 1])([query, att_score])
+        vector = Lambda(lambda x: K.sum(x, axis=1))(att_mat)
+        return vector
+
+    def compute_output_shape(self, input_shape):
+        return (input_shape[0], input_shape[2])
+
+    # def get_config(self): pass

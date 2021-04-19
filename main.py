@@ -1,23 +1,32 @@
 import logging
 from common.demo_args import get_args
 from common.data import DATASET
-from demo import rnn_classify_demo, cnn_classify_demo
-from demo import transformer_classify_demo, han_classify_demo
-from demo import rcnn_classify_demo
+from demo.classification import rnn_classify_demo, cnn_classify_demo
+from demo.classification import transformer_classify_demo, han_classify_demo
+from demo.classification import rcnn_classify_demo
+from demo.tagger import hybrid_tag_demo, cnn_tag_demo, idcnn_tag_demo
+from demo.tagger import tener_tag_demo, rnn_rnn_tag_demo
+
 DEMOS = {
-    "rnn": rnn_classify_demo,
-    "cnn": cnn_classify_demo,
-    "transformer": transformer_classify_demo,
-    "han": han_classify_demo,
-    "rcnn": rcnn_classify_demo
+    "rnn-classification": rnn_classify_demo,
+    "cnn-classification": cnn_classify_demo,
+    "transformer-classification": transformer_classify_demo,
+    "han-classification": han_classify_demo,
+    "rcnn-classification": rcnn_classify_demo,
+    "hybrid-tagger": hybrid_tag_demo,
+    "cnn-seq-tagger": cnn_tag_demo,
+    "idcnn-tagger": idcnn_tag_demo,
+    "tener-tagger": tener_tag_demo,
+    "rnn-attention-tagger": rnn_rnn_tag_demo
 }
 
 
-def main(args):
+def init_log(args):
     log_parameter = {
         "level": logging.INFO,
         "format": "%(levelname)s %(name)s %(funcName)s:%(lineno)d %(message)s"
     }
+
     if args.logfile:
         log_parameter["filename"] = args.logfile
         log_parameter["filemode"] = "w"
@@ -33,15 +42,19 @@ def main(args):
     else:
         logging.basicConfig(**log_parameter)
 
+
+def main(args):
+    init_log(args)
+
     try:
         data = DATASET[args.task](args)
     except KeyError:
         raise KeyError("Invalid Task")
 
     try:
-        demo = DEMOS[args.architecture]
+        demo = DEMOS[f"{args.architecture}-{data.TASK}"]
     except KeyError:
-        raise KeyError("Invalid sub-command")
+        raise KeyError("Invalid architecture or the dataset is not compatible with this architecture")  # noqa
 
     demo.main(args, data)
 

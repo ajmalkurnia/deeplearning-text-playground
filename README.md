@@ -2,19 +2,28 @@
 
 Playing with some deep learning for various text proccesing task, mainly using keras and some tensorflow
 
-## Architecture:
-1. Convolutional Neural Network (CNN)
-2. Recurrent Neural Network (RNN) (Bi-LSTM/bi-GRU)
-3. Attention Mechanism with RNN
-4. Transformers
-5. Hierarchical Attention Network (HAN) (**Classifier Only**)
-6. Recurrent Convolutional Neural Networks (RCNN) (**Classifier Only**)
-
 ## Task:
 1. Classification
 2. Sequence Labelling (**In-Progress**)
 3. Sequence-to-Sequence
 4. Text Generation
+
+## Architecture:
+1. Classification:
+   1. Convolutional Neural Network (CNN)
+   2. Recurrent Neural Network (RNN) (Bi-LSTM/Bi-GRU)
+   3. Attention Mechanism with RNN
+   4. Transformers
+   5. Hierarchical Attention Network (HAN)
+   6. Recurrent Convolutional Neural Networks (RCNN)
+2. Sequence Labelling:
+   1. CNN
+   2. IDCNN-CRF
+   3. LSTM-Attention-BiLSTM
+   4. CNN-BiLSTM-CRF
+   5. BiLSTM-CRF
+   6. BiLSTM-BiLSTM-CRF
+   7. Transformer (TENER)
 
 ## Demo:
 - Data format is a two column csv with header:
@@ -63,14 +72,24 @@ Source : [Kaggle](https://www.kaggle.com/amananandrai/ag-news-classification-dat
 ### Sequence Labelling
 
 #### IDN Tagged Corpus (id)
+Consist of more than 10000 instance of tokenized data along with its POS-TAG.
+Source : [Repo](https://github.com/famrashel/idn-tagged-corpus)
 
 #### Universal Dependencies ID (id)
+Universal dependencies dataset for indonesian language. The postag is taken from the UPOS column of the conllu file
+Source : [Repo](https://github.com/UniversalDependencies/UD_Indonesian-GSD)
 
 #### NER (id)
+NER Dataset for indonesian langauge
+Source : [Repo](https://github.com/khairunnisaor/idner-news-2k)
 
 #### Universal Dependencies EN (en)
+Universal dependencies dataset for english language. The postag is taken from the UPOS column of the conllu file
+Source : [Repo](https://github.com/UniversalDependencies/UD_English-EWT)
 
 #### NER (en)
+NER Dataset used on WNUT 2017
+Source : [Repo](https://github.com/leondz/emerging_entities_17) 
 
 ## Dependencies
 - tensorflow==2.4.1
@@ -91,6 +110,12 @@ Source : [Kaggle](https://www.kaggle.com/amananandrai/ag-news-classification-dat
 - Transformer [Vaswani A., 2017](https://arxiv.org/abs/1706.03762)
 - HAN [Yang Z., 2016](https://www.aclweb.org/anthology/N16-1174/)
 - RCNN [Lai S., 2015](https://dl.acm.org/doi/10.5555/2886521.2886636)
+- DE-CNN [Xu H., 2018](https://www.aclweb.org/anthology/P18-2094/)
+- IDCNN [Strubell E., 2017](https://www.aclweb.org/anthology/D17-1283/)
+- CNN-BiLSTM-CRF [Ma X., 2016](https://www.aclweb.org/anthology/P16-1101/)
+- BiLSTM-BiLSTM-CRF [Lample G., 2016](https://www.aclweb.org/anthology/N16-1030/)
+- LSTM-Attention-BiLSTM [Dozat T., 2017](https://www.aclweb.org/anthology/K17-3002/)
+- TENER [Yan H., 2019](https://www.aclweb.org/anthology/K17-3002/)
 
 ### Web Articles
 - [CNN classification 1](https://cezannec.github.io/CNN_Text_Classification/): More thorough explanation 
