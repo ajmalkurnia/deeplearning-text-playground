@@ -1,11 +1,6 @@
 from keras.layers import LSTM, Embedding, TimeDistributed, Concatenate, Add
 from keras.layers import Dropout, Bidirectional, Dense
-from keras.utils import to_categorical
-from keras.preprocessing.sequence import pad_sequences
 from keras.models import Model, Input
-
-import numpy as np
-import string
 
 from model.AttentionText.attention_text import CharTagAttention
 from model.base_tagger import BaseTagger
@@ -131,61 +126,6 @@ class StackedRNNTagger(BaseTagger):
         self.model.summary()
         self.model.compile(loss=self.loss, optimizer=self.optimizer)
 
-    def __init_transition_matrix(self, y):
-        """
-        Initialized transition matrix for CRF
-
-        :param y: 2D list, label of the dataset
-        :return transition_matrix: numpy array [n_label+1, n_label+1],
-            Transition matrix of the training label
-        """
-        n_labels = self.n_label + 1
-        self.transition_matrix = np.zeros((n_labels, n_labels))
-        for data in y:
-            for idx, label in enumerate(data[:self.seq_length]):
-                if idx:
-                    current = self.label2idx[label]
-                    prev = self.label2idx[data[idx-1]]
-                    self.transition_matrix[prev][current] += 1
-            self.transition_matrix[current][0] += 1
-            zero_pad = self.seq_length - len(data)
-            if zero_pad > 1:
-                self.transition_matrix[0][0] += zero_pad
-        for row in self.transition_matrix:
-            s = sum(row)
-            row[:] = (row + 1)/(s+n_labels)
-        return self.transition_matrix
-
-    def init_c2i(self):
-        """
-        Initialize character to index
-        """
-        vocab = set([*string.printable])
-        self.char2idx = {ch: i+1 for i, ch in enumerate(vocab)}
-        self.char2idx["UNK"] = len(self.char2idx)+1
-        self.n_chars = len(self.char2idx)+1
-
-    def get_char_vector(self, inp_seq):
-        """
-        Get character vector of the input sequence
-
-        :param inp_seq: list of list of string, tokenized input corpus
-        :return vector_seq: 3D numpy array, input vector on character level
-        """
-        vector_seq = np.zeros(
-            (len(inp_seq), self.seq_length, self.word_length)
-        )
-        for i, data in enumerate(inp_seq):
-            data = data[:self.seq_length]
-            for j, word in enumerate(data):
-                word = word[:self.word_length]
-                for k, ch in enumerate(word):
-                    if ch in self.char2idx:
-                        vector_seq[i, j, k] = self.char2idx[ch]
-                    else:
-                        vector_seq[i, j, k] = self.char2idx["UNK"]
-        return vector_seq
-
     def vectorize_input(self, inp_seq):
         """
         Prepare vector of the input data
@@ -199,35 +139,9 @@ class StackedRNNTagger(BaseTagger):
         }
         return input_vector
 
-    def vectorize_label(self, out_seq):
-        """
-        Get prepare vector of the label for training
-
-        :param out_seq: list of list of string, tokenized input corpus
-        :return out_seq: 3D numpy array, vector of label data
-        """
-        out_seq = [[self.label2idx[w] for w in s] for s in out_seq]
-        out_seq = pad_sequences(
-            maxlen=self.seq_length, sequences=out_seq, padding="post"
-        )
-        out_seq = [
-            to_categorical(i, num_classes=self.n_label+1) for i in out_seq
-        ]
-        return np.array(out_seq)
-
-    def init_training(self, X, y):
-        """
-        Initialized necessary class attributes for training
-
-        :param X: 2D list, training dataset in form of tokenized corpus
-        :param y: 2D list, training data label
-        """
-        self.init_l2i(y)
-        if self.word2idx is None:
-            self.init_w2i(X)
-        self.init_embedding()
+    def init_inverse_indexes(self, X, y):
+        super(StackedRNNTagger, self).init_inverse_indexes(X, y)
         self.init_c2i()
-        self.init_model()
 
     def get_class_param(self):
         class_param = {

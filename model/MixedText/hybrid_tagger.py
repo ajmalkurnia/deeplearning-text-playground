@@ -3,21 +3,16 @@ from keras.layers import Dropout, Bidirectional, Conv1D, MaxPooling1D
 from keras.layers import GlobalMaxPooling1D, Dense
 from keras.utils import to_categorical
 from keras.initializers import Constant, RandomUniform
-from keras.preprocessing.sequence import pad_sequences
 from keras.models import Model, Input
 from tensorflow_addons.layers.crf import CRF
+import numpy as np
 
 from model.extras.crf_subclass_model import ModelWithCRFLoss
 from model.TransformerText.relative_transformer_block import TransformerBlock
-
-import numpy as np
-import string
-import os
-
-from model.base_tagger import BaseTagger
+from model.base_crf_out_tagger import BaseCRFTagger
 
 
-class DLHybridTagger(BaseTagger):
+class DLHybridTagger(BaseCRFTagger):
     def __init__(
         self, word_length=50, char_embed_type="cnn", char_embed_size=30,
         main_layer_type="rnn",
@@ -295,60 +290,6 @@ class DLHybridTagger(BaseTagger):
             self.model.summary()
         self.model.compile(loss=self.loss, optimizer=self.optimizer)
 
-    def __init_transition_matrix(self, y):
-        """
-        Initialized transition matrix for CRF
-
-        :param y: 2D list, label of the dataset
-        :return transition_matrix: numpy array [n_label+1, n_label+1],
-            Transition matrix of the training label
-        """
-        n_labels = self.n_label + 1
-        self.transition_matrix = np.zeros((n_labels, n_labels))
-        for data in y:
-            for idx, label in enumerate(data[:self.seq_length]):
-                if idx:
-                    current = self.label2idx[label]
-                    prev = self.label2idx[data[idx-1]]
-                    self.transition_matrix[prev][current] += 1
-            self.transition_matrix[current][0] += 1
-            zero_pad = self.seq_length - len(data)
-            if zero_pad > 1:
-                self.transition_matrix[0][0] += zero_pad
-        for row in self.transition_matrix:
-            s = sum(row)
-            row[:] = (row + 1)/(s+n_labels)
-        return self.transition_matrix
-
-    def init_c2i(self):
-        """
-        Initialize character to index
-        """
-        vocab = set([*string.printable])
-        self.char2idx = {ch: i+1 for i, ch in enumerate(vocab)}
-        self.char2idx["UNK"] = len(self.char2idx)+1
-        self.n_chars = len(self.char2idx)+1
-
-    def get_char_vector(self, inp_seq):
-        """
-        Get character vector of the input sequence
-        :param inp_seq: list of list of string, tokenized input corpus
-        :return vector_seq: 3D numpy array, input vector on character level
-        """
-        vector_seq = np.zeros(
-            (len(inp_seq), self.seq_length, self.word_length)
-        )
-        for i, data in enumerate(inp_seq):
-            data = data[:self.seq_length]
-            for j, word in enumerate(data):
-                word = word[:self.word_length]
-                for k, ch in enumerate(word):
-                    if ch in self.char2idx:
-                        vector_seq[i, j, k] = self.char2idx[ch]
-                    else:
-                        vector_seq[i, j, k] = self.char2idx["UNK"]
-        return vector_seq
-
     def vectorize_input(self, inp_seq):
         """
         Prepare vector of the input data
@@ -373,37 +314,13 @@ class DLHybridTagger(BaseTagger):
             return 2D array when using crf
             return 3D array when not using crf
         """
-        out_seq = [[self.label2idx[w] for w in s] for s in out_seq]
-        out_seq = pad_sequences(
-            maxlen=self.seq_length, sequences=out_seq, padding="post"
-        )
+        out_seq = super(DLHybridTagger, self).vectorize_label(out_seq)
         if not self.use_crf:
             # the label for Dense output layer needed to be onehot encoded
             out_seq = [
                 to_categorical(i, num_classes=self.n_label+1) for i in out_seq
             ]
         return np.array(out_seq)
-
-    def get_crf_label(self, pred_sequence, input_data):
-        """
-        Get label sequence
-        :param pred_sequence: 4 length list, prediction results from CRF layer
-        :param input_data: list of list of string, tokenized input corpus
-        :return label_seq: list of list of string, readable label sequence
-        """
-        label_seq = []
-        for i, s in enumerate(pred_sequence[0]):
-            tmp = []
-            for j, w in enumerate(s[:len(input_data[i])]):
-                if w in self.idx2label:
-                    label = self.idx2label[w]
-                else:
-                    label = self.idx2label[np.argmax(
-                        pred_sequence[1][i][j][1:]
-                    ) + 1]
-                tmp.append(label)
-            label_seq.append(tmp)
-        return label_seq
 
     def devectorize_label(self, pred_sequence, input_data):
         """
@@ -419,39 +336,23 @@ class DLHybridTagger(BaseTagger):
         else:
             return self.get_greedy_label(pred_sequence, input_data)
 
-    def init_training(self, X, y):
+    def init_inverse_indexes(self, X, y):
+        super(DLHybridTagger, self).init_inverse_indexes(X, y)
+        if self.char_embed_type:
+            self.init_c2i()
+
+    def training_prep(self, X, y):
         """
         Initialized necessary class attributes for training
 
         :param X: 2D list, training dataset in form of tokenized corpus
         :param y: 2D list, training data label
         """
-        self.init_l2i(y)
-        if self.word2idx is None:
-            self.init_w2i(X)
-        self.init_embedding()
+        self.init_inverse_indexes(X, y)
         if self.use_crf:
-            self.__init_transition_matrix(y)
-        if self.char_embed_type:
-            self.init_c2i()
-
+            self.compute_transition_matrix(y)
+        self.init_embedding()
         self.init_model()
-
-    def save_crf(self, filepath, zipf):
-        """
-        Saving CRF model
-
-        :param filepath: string, zip file path
-        :param zipf: zipfile
-        """
-        for dirpath, dirs, files in os.walk(filepath):
-            if files == []:
-                zipf.write(
-                    dirpath, "/".join(dirpath.split("/")[-2:])+"/"
-                )
-            for f in files:
-                fn = os.path.join(dirpath, f)
-                zipf.write(fn, "/".join(fn.split("/")[3:]))
 
     def save_network(self, filepath, zipf):
         """
@@ -461,11 +362,9 @@ class DLHybridTagger(BaseTagger):
         :param zipf: zipfile
         """
         if self.use_crf:
-            self.model.save(filepath[:-5], save_format="tf")
-            self.save_crf(filepath[:-5], zipf)
+            super(DLHybridTagger, self).save_network(filepath, zipf)
         else:
-            self.model.save(filepath)
-            zipf.write(filepath, filepath.split("/")[-1])
+            super(BaseCRFTagger, self).save_network(filepath, zipf)
 
     def get_class_param(self):
         class_param = {

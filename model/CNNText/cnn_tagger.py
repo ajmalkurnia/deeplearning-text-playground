@@ -2,8 +2,6 @@ from keras.layers import Embedding, Concatenate, TimeDistributed
 from keras.layers import Dropout, Conv1D, Dense
 from keras.models import Model, Input
 
-# import numpy as np
-
 from model.base_tagger import BaseTagger
 
 

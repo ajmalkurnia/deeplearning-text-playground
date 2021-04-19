@@ -11,6 +11,7 @@ from collections import defaultdict
 from zipfile import ZipFile
 import numpy as np
 import pickle
+import string
 
 from .extras.crf_subclass_model import ModelWithCRFLoss
 
@@ -126,6 +127,36 @@ class BaseTagger():
         else:
             self.embedding = self.embedding_type
 
+    def init_c2i(self):
+        """
+        Initialize character to index
+        """
+        vocab = set([*string.printable])
+        self.char2idx = {ch: i+1 for i, ch in enumerate(vocab)}
+        self.char2idx["UNK"] = len(self.char2idx)+1
+        self.n_chars = len(self.char2idx)+1
+
+    def get_char_vector(self, inp_seq):
+        """
+        Get character vector of the input sequence
+
+        :param inp_seq: list of list of string, tokenized input corpus
+        :return vector_seq: 3D numpy array, input vector on character level
+        """
+        vector_seq = np.zeros(
+            (len(inp_seq), self.seq_length, self.word_length)
+        )
+        for i, data in enumerate(inp_seq):
+            data = data[:self.seq_length]
+            for j, word in enumerate(data):
+                word = word[:self.word_length]
+                for k, ch in enumerate(word):
+                    if ch in self.char2idx:
+                        vector_seq[i, j, k] = self.char2idx[ch]
+                    else:
+                        vector_seq[i, j, k] = self.char2idx["UNK"]
+        return vector_seq
+
     def get_word_vector(self, inp_seq):
         """
         Get word vector of the input sequence
@@ -206,17 +237,19 @@ class BaseTagger():
             vector_y = self.vectorize_label(y)
         return X_input, vector_y
 
-    def init_training(self, X, y):
+    def init_inverse_indexes(self, X, y):
+        self.init_l2i(y)
+        if self.word2idx is None:
+            self.init_w2i(X)
+
+    def training_prep(self, X, y):
         """
         Initialized necessary class attributes for training
 
         :param X: 2D list, training dataset in form of tokenized corpus
         :param y: 2D list, training data label
         """
-        self.init_l2i(y)
-        if self.word2idx is None:
-            self.init_w2i(X)
-
+        self.init_inverse_indexes(X, y)
         self.init_embedding()
         self.init_model()
 
@@ -231,7 +264,7 @@ class BaseTagger():
         :param batch_size: int, size of the batch
         :return history: output of the fit method
         """
-        self.init_training(X, y)
+        self.training_prep(X, y)
 
         X_train, y_train = self.prepare_data(X, y)
         if valid_split:
