@@ -35,7 +35,8 @@ class HANClassifier(BaseClassifier):
         # self.__doc__ = BaseClassifier.__doc__
         kwargs["input_size"] = input_shape[1]
         super(HANClassifier, self).__init__(**kwargs)
-
+        if rnn_type not in ["lstm", "gru"]:
+            raise ValueError("Invalid RNN type")
         self.max_input_length = input_shape[0]
         self.rnn_size = rnn_size
         self.dropout = dropout

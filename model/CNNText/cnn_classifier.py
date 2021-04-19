@@ -44,6 +44,8 @@ class CNNClassifier(BaseClassifier):
         self.conv_layers = conv_layers
         self.conv_type = conv_type
         self.fcn_layers = fcn_layers
+        if conv_type not in ["sequential", "parallel"]:
+            raise ValueError("Invalid convolution type")
 
         super().__init__(**kwargs)
 

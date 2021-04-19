@@ -96,6 +96,10 @@ class DLHybridTagger(BaseCRFTagger):
         :param crf: bool, whether to use crf or softmax
         """
         super(DLHybridTagger, self).__init__(**kwargs)
+        if char_embed_type not in ["cnn", "rnn", "adatrans", None]:
+            raise ValueError("Invalid character embedding")
+        if main_layer_type not in ["rnn", "adatrans"]:
+            raise ValueError("Invalid main layer")
         self.word_length = word_length
         self.char_embed_size = char_embed_size
         self.ed = embedding_dropout
