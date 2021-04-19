@@ -4,6 +4,7 @@ from keras.layers import GlobalMaxPooling1D, Dense
 from keras.utils import to_categorical
 from keras.initializers import Constant, RandomUniform
 from keras.models import Model, Input
+from keras.metrics import Accuracy
 from tensorflow_addons.layers.crf import CRF
 import numpy as np
 
@@ -292,7 +293,9 @@ class DLHybridTagger(BaseCRFTagger):
             ))(self.model)
             self.model = Model(input_layer, out)
             self.model.summary()
-        self.model.compile(loss=self.loss, optimizer=self.optimizer)
+        self.model.compile(
+            loss=self.loss, optimizer=self.optimizer, metrics=[Accuracy()]
+        )
 
     def vectorize_input(self, inp_seq):
         """

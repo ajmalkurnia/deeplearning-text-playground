@@ -1,6 +1,7 @@
 from keras.layers import Embedding, Concatenate, TimeDistributed
 from keras.layers import Dropout, Conv1D, Dense
 from keras.models import Model, Input
+from keras.metrics import Accuracy
 
 from model.base_tagger import BaseTagger
 
@@ -70,7 +71,9 @@ class CNNTagger(BaseTagger):
 
         self.model = Model(input_layer, out)
         self.model.summary()
-        self.model.compile(loss=self.loss, optimizer=self.optimizer)
+        self.model.compile(
+            loss=self.loss, optimizer=self.optimizer, metrics=[Accuracy()]
+        )
 
     def get_class_param(self):
         class_param = {

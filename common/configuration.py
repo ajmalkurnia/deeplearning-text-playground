@@ -176,12 +176,14 @@ def get_optimizer(conf):
 def get_config(data, args):
     config = BASE_CONFIG
     config["optimizer"] = get_optimizer(config["optimizer"])
-    config["input_size"] = data.data.get_sequence_length()
+    config["embedding_file"] = args.embeddingfile
+    config["embedding_type"] = args.embeddingtype
+    config["input_size"] = data.get_sequence_length()
 
-    if data.task == "tagger":
+    if data.TASK == "tagger":
         config["seq_length"] = config.pop("input_size")
 
-    config = {**config, **ARCHITECTURE_CONFIG[data.task][args.architecture]}
+    config = {**config, **ARCHITECTURE_CONFIG[data.TASK][args.architecture]}
     if args.architecture == "hybrid":
         config["char_embed_type"] = args.charlayer
         config["main_layer_type"] = args.mainlayer

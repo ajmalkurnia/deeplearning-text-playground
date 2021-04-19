@@ -1,6 +1,7 @@
 from keras.layers import Embedding, Dropout, Conv1D, Dense
 from keras.models import Model, Input
 from tensorflow_addons.layers.crf import CRF
+from keras.metrics import Accuracy
 
 from model.extras.crf_subclass_model import ModelWithCRFLoss
 from model.base_crf_out_tagger import BaseCRFTagger
@@ -81,7 +82,9 @@ class IDCNNTagger(BaseCRFTagger):
         self.model.summary()
         # Subclassing to properly compute crf loss
         self.model = ModelWithCRFLoss(self.model)
-        self.model.compile(loss=self.loss, optimizer=self.optimizer)
+        self.model.compile(
+            loss=self.loss, optimizer=self.optimizer, metrics=[Accuracy()]
+        )
 
     def get_class_param(self):
         class_param = {

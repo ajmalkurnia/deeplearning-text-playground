@@ -2,6 +2,8 @@ from keras.layers import Dense, Dropout, Embedding, Input, TimeDistributed
 from keras.layers import GlobalMaxPooling1D, Concatenate
 from keras.initializers import Constant, RandomUniform
 from keras.models import Model
+from keras.metrics import Accuracy
+
 from tensorflow_addons.layers.crf import CRF
 import numpy as np
 
@@ -131,7 +133,9 @@ class TENERTagger(BaseCRFTagger):
         self.model.summary()
         # Subclassing to properly compute crf loss
         self.model = ModelWithCRFLoss(self.model)
-        self.model.compile(optimizer=self.optimizer, loss=self.loss)
+        self.model.compile(
+            loss=self.loss, optimizer=self.optimizer, metrics=[Accuracy()]
+        )
 
     def vectorize_input(self, inp_seq):
         """

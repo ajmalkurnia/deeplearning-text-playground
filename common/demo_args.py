@@ -5,6 +5,7 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser = base_args(parser)
     parser = base_embedding_args(parser)
+    parser = base_train_args(parser)
     subparser = parser.add_subparsers(help="Sub-command", dest="architecture")
     subparser.add_parser("rnn", help="Run RNN model")
     subparser.add_parser("cnn", help="Run CNN model")
@@ -67,6 +68,7 @@ def base_train_args(parser):
     group.add_argument(
         "-c", "--checkpoint", type=str, help="Checkpoint path"
     )
+    return parser
 
 
 def hybrid_tagger_args(subparser):

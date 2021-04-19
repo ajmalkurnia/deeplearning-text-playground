@@ -1,6 +1,7 @@
 from keras.layers import LSTM, Embedding, TimeDistributed, Concatenate, Add
 from keras.layers import Dropout, Bidirectional, Dense
 from keras.models import Model, Input
+from keras.metrics import Accuracy
 
 from model.AttentionText.attention_text import CharTagAttention
 from model.base_tagger import BaseTagger
@@ -124,7 +125,9 @@ class StackedRNNTagger(BaseTagger):
 
         self.model = Model(input_layer, out)
         self.model.summary()
-        self.model.compile(loss=self.loss, optimizer=self.optimizer)
+        self.model.compile(
+            loss=self.loss, optimizer=self.optimizer, metrics=[Accuracy()]
+        )
 
     def vectorize_input(self, inp_seq):
         """
