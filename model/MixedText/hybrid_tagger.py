@@ -9,7 +9,7 @@ from tensorflow_addons.layers.crf import CRF
 import numpy as np
 
 from model.extras.crf_subclass_model import ModelWithCRFLoss
-from model.TransformerText.relative_transformer_block import TransformerBlock
+from model.TransformerText.transformer_block import TransformerBlock
 from model.base_crf_out_tagger import BaseCRFTagger
 
 

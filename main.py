@@ -5,7 +5,7 @@ from demo import classify
 from demo import tagging
 
 DEMOS = {
-    "classify": classify,
+    "classification": classify,
     "tagger": tagging,
 }
 

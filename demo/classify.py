@@ -23,7 +23,7 @@ def main(args, data):
     logger = logging.getLogger(__name__)
     logger.info("Prepraring data")
     (X_train, y_train), (X_test, y_test), (X_val, y_val) = data.get_data()
-    logger.info("Prepraring CNN parameter")
+    logger.info(f"Prepraring {args.architecture} parameter")
     arch_config = {}
 
     classifier = CLASSIFIER[args.architecture]

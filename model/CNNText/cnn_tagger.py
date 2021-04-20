@@ -38,6 +38,7 @@ class CNNTagger(BaseTagger):
         self.domain_embedding_file = domain_embedding_file
         self.domain_embedding_type = domain_embedding_type
         self.domain_embedding_matrix = domain_embedding_matrix
+        self.domain_embedding_size = domain_embedding_size
 
     def init_model(self):
         """

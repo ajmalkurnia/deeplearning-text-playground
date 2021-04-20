@@ -22,10 +22,10 @@ def evaluate(pred, ref):
 
 
 TAGGER = {
-    "cnn-tag": CNNTagger,
+    "cnn": CNNTagger,
     "hybrid": DLHybridTagger,
     "idcnn": IDCNNTagger,
-    "stacked-rnn": StackedRNNTagger,
+    "rnn": StackedRNNTagger,
     "tener": TENERTagger
 }
 

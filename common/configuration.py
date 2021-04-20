@@ -21,7 +21,7 @@ OPTIMIZER_CONFIG = {
 
 
 ARCHITECTURE_CONFIG = {
-    "classifier": {
+    "classification": {
         "cnn": {
             "conv_type": "parallel",
             "conv_layers": [
@@ -100,7 +100,11 @@ ARCHITECTURE_CONFIG = {
         "cnn": {
             "embedding_dropout": 0.5,
             "pre_outlayer_dropout": 0.5,
-            "conv_layers": [[[128, 3], [128, 5]], [[256, 5]], [[256, 5]]]
+            "conv_layers": [[[128, 3], [128, 5]], [[256, 5]], [[256, 5]]],
+            "domain_embedding_file": None,
+            "domain_embedding_type": "glorot_uniform",
+            "domain_embedding_matrix": None,
+            "domain_embedding_size": 100,
         },
         "idcnn": {
             "embedding_dropout": 0.5,

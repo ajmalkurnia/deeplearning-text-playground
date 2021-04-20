@@ -106,6 +106,27 @@ class HANClassifier(BaseClassifier):
                     vector_input[i][j][k] = self.vocab.get(token, 0)
         return vector_input
 
+    def reshape_X(self, X):
+        if isinstance(X[0][0], str):
+            X = [[[*token] for token in doc] for doc in X]
+        return X
+
+    def train(
+        self, X, y, epoch, batch_size,
+        validation_pair=None, ckpoint_file=None
+    ):
+        X = self.reshape_X(X)
+        if validation_pair:
+            X_val = self.reshape_X(validation_pair[0])
+            validation_pair = (X_val, validation_pair[1])
+        super(HANClassifier, self).train(
+            X, y, epoch, batch_size, validation_pair, ckpoint_file
+        )
+
+    def test(self, X):
+        X = self.reshape_X(X)
+        return super(HANClassifier, self).test(X)
+
     def get_class_param(self):
         return {
             "input_size": self.max_input,
