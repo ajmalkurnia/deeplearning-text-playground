@@ -249,7 +249,7 @@ class DLHybridTagger(BaseCRFTagger):
         # Word Embebedding
         input_word_layer = Input(shape=(self.seq_length,), name="word")
         word_embed_block = Embedding(
-            self.vocab_size+1, self.word_embed_size,
+            self.vocab_size+1, self.embedding_size,
             input_length=self.seq_length,
             embeddings_initializer=self.embedding,
             mask_zero=True,

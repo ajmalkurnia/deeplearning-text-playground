@@ -50,7 +50,7 @@ class IDCNNTagger(BaseCRFTagger):
         # Word Embebedding
         input_layer = Input(shape=(self.seq_length,))
         embedding_layer = Embedding(
-            self.vocab_size+1, self.word_embed_size,
+            self.vocab_size+1, self.embedding_size,
             input_length=self.seq_length,
             embeddings_initializer=self.embedding,
             mask_zero=True,

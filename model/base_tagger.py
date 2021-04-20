@@ -26,7 +26,7 @@ class BaseTagger():
         """
         Deep learning based sequence tagger.
         :param seq_length: int, maximum sequence length in a data
-        :param word_embed_size: int, the size of word level embedding,
+        :param embedding_size: int, the size of word level embedding,
             relevant when not using pretrained embedding file
         :param embedding_file: string, path to pretrained word embedding
         :param embedding_type: string, word embedding types:
@@ -89,38 +89,38 @@ class BaseTagger():
         self.label2idx = {ch: idx+1 for idx, ch in enumerate(sorted(label))}
         self.idx2label = {idx: ch for ch, idx in self.label2idx.items()}
 
-    def init_wv_embedding(self):
+    def init_wv_embedding(self, embedding_file, embedding_type):
         """
         Initialization of for Word embedding matrix
         UNK word will be initialized randomly
         """
-        wv_model = WE_TYPE[self.embedding_type].load_model(self.embedding_file)
-        self.word_embed_size = wv_model.size
+        wv_model = WE_TYPE[embedding_type].load_model(embedding_file)
+        embedding = np.zeros((self.vocab_size+1, wv_model.size), dtype=float)
 
-        self.embedding = np.zeros(
-            (self.vocab_size+1, wv_model.size), dtype=float
-        )
         for word, idx in self.word2idx.items():
-            self.embedding[idx, :] = wv_model.retrieve_vector(word)
+            embedding[idx, :] = wv_model.retrieve_vector(word)
+        return embedding, wv_model.size
 
     def init_onehot_embedding(self):
         """
         Initialization one hot vector the vocabulary
         """
-        self.embedding_size = len(self.vocab)
-        self.embedding = np.eye(
+        embedding = np.eye(
             self.vocab_size, dtype=np.int32
         )
+        return embedding, len(self.vocab)
 
     def init_embedding(self):
         """
         Initialize argument for word embedding initializer
         """
-        if self.embedding_type in ["w2v", "ft"]:
-            self.init_wv_embedding()
+        if self.embedding_type in ["w2v", "ft", "glove"]:
+            self.embedding, self.embedding_size = self.init_wv_embedding(
+                self.embedding_file, self.embedding_type
+            )
             self.embedding = Constant(self.embedding)
         elif self.embedding_type == "onehot":
-            self.init_onehot_embedding()
+            self.embedding, self.embedding_size = self.init_onehot_embedding()
             self.embedding = Constant(self.embedding)
         elif self.embedding_type == "custom":
             self.embedding = Constant(self.embedding)

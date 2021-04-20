@@ -85,28 +85,40 @@ class BaseClassifier():
     def init_model(self):
         raise NotImplementedError()
 
-    def __init_onehot_embedding(self):
+    def init_onehot_embedding(self,):
         """
         Initialization one hot vector the vocabulary
         """
-        self.embedding_size = len(self.vocab)
-        self.embedding = np.eye(
+        embedding = np.eye(
             self.vocab_size, dtype=np.int32
         )
+        return embedding, len(self.vocab)
 
-    def __init_wv_embedding(self):
+    def init_wv_embedding(self, embedding_file, embedding_type):
         """
         Initialization of for Word embedding matrix
         UNK word will be initialized randomly
         """
-        wv_model = WE_TYPE[self.embedding_type].load_model(self.embedding_file)
-        self.embedding_size = wv_model.size
+        wv_model = WE_TYPE[embedding_type].load_model(embedding_file)
+        embedding = np.zeros((self.vocab_size, wv_model.size), dtype=float)
 
-        self.embedding = np.zeros(
-            (self.vocab_size, wv_model.size), dtype=float
-        )
         for word, idx in self.vocab.items():
-            self.embedding[idx, :] = wv_model.retrieve_vector(word)
+            embedding[idx, :] = wv_model.retrieve_vector(word)
+        return embedding, wv_model.size
+
+    def __init_embedding(self):
+        if self.embedding_type in ["w2v", "ft", "glove"]:
+            self.embedding, self.embedding_size = self.init_wv_embedding(
+                self.embedding_file, self.embedding_type
+            )
+            self.embedding = Constant(self.embedding)
+        elif self.embedding_type == "onehot":
+            self.embedding, self.embedding_size = self.init_onehot_embedding()
+            self.embedding = Constant(self.embedding)
+        elif self.embedding_type == "custom":
+            self.embedding = Constant(self.embedding)
+        else:
+            self.embedding = self.embedding_type
 
     def __init_w2i(self, tokenized_corpus):
         """
@@ -232,18 +244,6 @@ class BaseClassifier():
             epochs=epoch,
             callbacks=callbacks_list
         )
-
-    def __init_embedding(self):
-        if self.embedding_type in ["w2v", "ft"]:
-            self.__init_wv_embedding()
-            self.embedding = Constant(self.embedding)
-        elif self.embedding_type == "onehot":
-            self.__init_onehot_embedding()
-            self.embedding = Constant(self.embedding)
-        elif self.embedding_type == "custom":
-            self.embedding = Constant(self.embedding)
-        else:
-            self.embedding = self.embedding_type
 
     def train(
         self, X, y, epoch, batch_size,
