@@ -420,7 +420,11 @@ class NEREN(Dataset):
         return data
 
     def get_data(self):
-        files = glob(f"{self.path}/*.conll")
+        files = [
+            f"{self.path}/wnut17train.conll",
+            f"{self.path}/emerging.dev.conll",
+            f"{self.path}/emerging.test.annotated",
+        ]
         data = [None] * 3
         for filen in files:
             df = self.open_data(filen)
