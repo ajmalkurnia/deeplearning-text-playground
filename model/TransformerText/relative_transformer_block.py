@@ -1,4 +1,4 @@
-from keras.layers import Layer, Dense, Dropout, LayerNormalization
+from keras.layers import Layer, Dropout
 from keras.initializers import Constant
 from keras import backend as K
 # import keras
@@ -147,60 +147,3 @@ class RelativeMultiAttention(Layer):
         # B x S x attention_d
         output = tf.einsum("bhd,dl->bhl", o_seq, self.W_o)
         return output
-
-
-class TransformerBlock(Layer):
-    def __init__(
-        self, dim_ff, n_heads, embed_dim, transformer_dropout=0.5,
-        attention_dropout=0.5, scale=False, **kwargs
-    ):
-        """
-        Initialize a transformer layer
-        :param dim_ff: int, the size of hidden ffn unit
-        :param n_heads: int, number of heads
-        :param embed_dim: int, attention length (embedding length)
-        :param transformer_dropout: float, dropout rate value
-        :param attention_dropout: float, dropout rate in multi head attention
-        """
-        super(TransformerBlock, self).__init__(**kwargs)
-        self.dim_ff = dim_ff
-        self.dropout = transformer_dropout
-        self.n_heads = n_heads
-        self.att_dim = embed_dim
-        self.att_dropout = attention_dropout
-        self.scale = scale
-
-    def build(self, input_shape):
-        self.mha = RelativeMultiAttention(
-            self.n_heads, self.att_dim, self.att_dropout, self.scale
-        )
-        self.ffn_hidden = Dense(self.dim_ff, activation="relu")
-        self.ffn_out = Dense(self.att_dim)
-        self.att_dropout = Dropout(self.dropout)
-        self.att_layer_norm = LayerNormalization(epsilon=1e-6)
-        self.fcn_dropout = Dropout(self.dropout)
-        self.fcn_layer_norm = LayerNormalization(epsilon=1e-6)
-
-    def call(self, inputs, training, mask=None):
-        if mask is not None:
-            casted_mask = tf.expand_dims(tf.cast(mask, "float32"), -1)
-            inputs *= casted_mask
-        mha_out = self.mha([inputs, inputs])
-        mha_out = self.att_dropout(mha_out, training=training)
-        mha_out = self.att_layer_norm(inputs + mha_out)
-
-        fcn_out = self.ffn_out(self.ffn_hidden(mha_out))
-        fcn_out = self.fcn_dropout(fcn_out, training=training)
-
-        return self.fcn_layer_norm(mha_out + fcn_out)
-
-    def compute_output_shape(self, input_shape):
-        return input_shape
-
-    def get_config(self):
-        config = super(TransformerBlock, self).get_config()
-        config["dim_ff"] = self.dim_ff
-        config["dropout"] = self.dropout
-        config["n_heads"] = self.n_heads
-        config["embed_dim"] = self.att_dim
-        return config

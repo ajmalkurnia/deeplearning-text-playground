@@ -4,6 +4,7 @@ from keras import backend as K
 import keras
 
 import tensorflow as tf
+from .relative_transformer_block import RelativeMultiAttention
 
 
 class MultiAttentionOld(Layer):
@@ -115,29 +116,50 @@ class MultiAttention(Layer):
 
 
 class TransformerBlock(Layer):
-    def __init__(self, dim_ff, dropout, n_heads, embed_dim, **kwargs):
+    def __init__(
+        self, dim_ff, n_heads, embed_dim, transformer_dropout=0.5,
+        attention_dropout=0.5, attention_type="regular", scale=False, **kwargs
+    ):
         """
         Initialize a transformer layer
         :param dim_ff: int, the size of hidden ffn unit
-        :param dropout: float, dropout rate value
         :param n_heads: int, number of heads
         :param embed_dim: int, attention length (embedding length)
+        :param transformer_dropout: float, dropout rate value in transformer
+        :param attention_dropout: float, dropout rate value in attention
+        :param attention_type: string, multihead attention type
+            regular, regular multihead attention
+            adaptive, TENER, A bit like transformer-XL albeit
+                slightly different
+        :param scale: boolean, attention scaling, only used at adaptive
+            attention
         """
         super(TransformerBlock, self).__init__(**kwargs)
+        if attention_type not in ["regular", "adaptive"]:
+            raise ValueError("Invalid attention type")
+
         self.dim_ff = dim_ff
-        self.dropout = dropout
         self.n_heads = n_heads
         self.att_dim = embed_dim
+        self.transformer_dropout = transformer_dropout
+        self.attention_dropout = attention_dropout
+        self.attention_type = attention_type
+        self.scale = scale
 
     def build(self, input_shape):
-        self.mha = MultiAttention(
-            self.n_heads, self.att_dim
-        )
+        if self.attention_type == "regular":
+            self.mha = MultiAttention(
+                self.n_heads, self.att_dim
+            )
+        elif self.attention_type == "adaptive":
+            self.mha = RelativeMultiAttention(
+                self.n_heads, self.att_dim, self.att_dropout, self.scale
+            )
         self.ffn_hidden = Dense(self.dim_ff, activation="relu")
         self.ffn_out = Dense(self.att_dim)
-        self.att_dropout = Dropout(self.dropout)
+        self.att_dropout = Dropout(self.transformer_dropout)
         self.att_layer_norm = LayerNormalization(epsilon=1e-6)
-        self.fcn_dropout = Dropout(self.dropout)
+        self.fcn_dropout = Dropout(self.transformer_dropout)
         self.fcn_layer_norm = LayerNormalization(epsilon=1e-6)
 
     def call(self, inputs, training, mask=None):
@@ -156,9 +178,12 @@ class TransformerBlock(Layer):
     def get_config(self):
         config = super(TransformerBlock, self).get_config()
         config["dim_ff"] = self.dim_ff
-        config["dropout"] = self.dropout
         config["n_heads"] = self.n_heads
         config["embed_dim"] = self.att_dim
+        config["transformer_dropout"] = self.transformer_dropout
+        config["attention_dropout"] = self.attention_dropout
+        config["attention_type"] = self.attention_type
+        config["scale"] = self.scale
         return config
 
 
@@ -201,8 +226,8 @@ class TransformerEmbedding(Layer):
             input_dim=self.vocab_size,
             output_dim=self.embed_dim,
             embeddings_initializer=self.token_initializer,
-            trainable=self.trainable_embedding
-            # mask_zero=True
+            trainable=self.trainable_embedding,
+            mask_zero=True
         )
 
         self.pos_emb = Embedding(

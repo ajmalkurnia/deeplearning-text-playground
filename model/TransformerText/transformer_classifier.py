@@ -64,7 +64,7 @@ class TransformerClassifier(BaseClassifier):
         )(input_layer)
         for _ in range(self.n_blocks):
             self.model = TransformerBlock(
-                self.dim_ff, self.dropout, self.n_heads, self.attention_dim
+                self.dim_ff, self.n_heads, self.attention_dim, self.dropout
             )(self.model)
 
         if self.sequence_embedding == "cls":

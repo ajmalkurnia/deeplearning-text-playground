@@ -9,7 +9,7 @@ import numpy as np
 
 from model.extras.crf_subclass_model import ModelWithCRFLoss
 from model.base_crf_out_tagger import BaseCRFTagger
-from model.TransformerText.relative_transformer_block import TransformerBlock
+from model.TransformerText.transformer_block import TransformerBlock
 
 
 class TENERTagger(BaseCRFTagger):
@@ -117,8 +117,8 @@ class TENERTagger(BaseCRFTagger):
         self.model = Dense(self.attention_dim)(embed_block)
         for _ in range(self.n_blocks):
             self.model = TransformerBlock(
-                self.dim_ff, self.n_heads, self.attention_dim, self.td,
-                self.ad, self.scale
+                self.dim_ff, self.n_heads, self.td, self.attention_dim,
+                self.ad, "adaptive", self.scale
             )(self.model)
         self.model = Dropout(self.otd)(self.model)
         for units, do_rate, activation in self.fcn_layers:
