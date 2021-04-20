@@ -358,7 +358,9 @@ class DLHybridTagger(BaseCRFTagger):
         self.init_inverse_indexes(X, y)
         if self.use_crf:
             self.compute_transition_matrix(y)
-        self.init_embedding()
+        self.embedding, self.embedding_size = self.init_embedding(
+            self.embedding_file, self.embedding_type, self.embedding_size
+        )
         self.init_model()
 
     def save_network(self, filepath, zipf):

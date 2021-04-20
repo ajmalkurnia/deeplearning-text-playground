@@ -110,22 +110,24 @@ class BaseTagger():
         )
         return embedding, len(self.vocab)
 
-    def init_embedding(self):
+    def init_embedding(self, embedding_file, embedding_type, embedding_size):
         """
         Initialize argument for word embedding initializer
         """
-        if self.embedding_type in ["w2v", "ft", "glove"]:
-            self.embedding, self.embedding_size = self.init_wv_embedding(
-                self.embedding_file, self.embedding_type
+        if embedding_type in ["w2v", "ft", "glove"]:
+            embedding, embedding_size = self.init_wv_embedding(
+                embedding_file, embedding_type
             )
-            self.embedding = Constant(self.embedding)
-        elif self.embedding_type == "onehot":
-            self.embedding, self.embedding_size = self.init_onehot_embedding()
-            self.embedding = Constant(self.embedding)
-        elif self.embedding_type == "custom":
-            self.embedding = Constant(self.embedding)
+            embedding = Constant(embedding)
+        elif embedding_type == "onehot":
+            embedding, embedding_size = self.init_onehot_embedding()
+            embedding = Constant(embedding)
+        elif embedding_type == "custom":
+            embedding = Constant(embedding)
         else:
-            self.embedding = self.embedding_type
+            embedding = embedding_type
+
+        return embedding, embedding_size
 
     def init_c2i(self):
         """
@@ -250,7 +252,9 @@ class BaseTagger():
         :param y: 2D list, training data label
         """
         self.init_inverse_indexes(X, y)
-        self.init_embedding()
+        self.embedding, self.embedding_size = self.init_embedding(
+            self.embedding_file, self.embedding_type, self.embedding_size
+        )
         self.init_model()
 
     def train(
