@@ -1,8 +1,8 @@
 from keras.layers import LSTM, Embedding, TimeDistributed, Concatenate, Add
 from keras.layers import Dropout, Bidirectional, Dense
 from keras.models import Model, Input
-from keras.metrics import Accuracy
-
+from keras.metrics import CategoricalAccuracy
+from keras.losses import CategoricalCrossentropy
 from model.AttentionText.attention_text import CharTagAttention
 from model.base_tagger import BaseTagger
 
@@ -42,7 +42,7 @@ class StackedRNNTagger(BaseTagger):
         self.rd = recurrent_dropout
         self.char_rnn_units = char_rnn_units
         self.char_rd = char_recurrent_dropout
-
+        # self.loss =
         self.main_layer_dropout = main_layer_dropout
 
     def __get_char_embedding(self):
@@ -118,15 +118,18 @@ class StackedRNNTagger(BaseTagger):
         ))(self.model)
         # Dense layer
         self.model = Dense(self.n_label+1, activation="relu")(self.model)
-        self.model = Dense(self.n_label+1)(self.model)
-        out = TimeDistributed(
-            Dense(self.n_label+1, activation="softmax")
-        )(self.model)
+        out = Dense(self.n_label+1)(self.model)
+        # out = TimeDistributed(
+        #     Dense(self.n_label+1, activation="softmax")
+        # )(self.model)
 
         self.model = Model(input_layer, out)
         self.model.summary()
         self.model.compile(
-            loss=self.loss, optimizer=self.optimizer, metrics=[Accuracy()]
+            # Compute loss from logits because the output is not probability
+            loss=CategoricalCrossentropy(from_logits=True),
+            # use CategoricalAccuracy so it can operates using logits
+            optimizer=self.optimizer, metrics=[CategoricalAccuracy()]
         )
 
     def vectorize_input(self, inp_seq):

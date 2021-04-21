@@ -210,4 +210,8 @@ class CharTagAttention(Layer):
     def compute_output_shape(self, input_shape):
         return (input_shape[0], input_shape[2])
 
-    # def get_config(self): pass
+    def get_config(self):
+        config = super(Attention, self).get_config()
+        config["feature"] = self.feature
+        config["max_length"] = self.maxlen
+        return config

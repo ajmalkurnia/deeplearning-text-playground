@@ -90,10 +90,10 @@ ARCHITECTURE_CONFIG = {
         "rnn": {
             "word_length": 50,
             "char_embed_size": 100,
-            "char_rnn_units": 400,
+            "char_rnn_units": 100,
             "char_recurrent_dropout": 0.33,
             "recurrent_dropout": 0.33,
-            "rnn_units": 400,
+            "rnn_units": 100,
             "embedding_dropout": 0.5,
             "main_layer_dropout": 0.5
         },
