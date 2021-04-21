@@ -1,6 +1,8 @@
 # Deep Learning PlayGround
 
-Playing with some deep learning for various text proccesing task, mainly using keras and some tensorflow
+Playing with some deep learning for various text proccesing task, mainly using keras and some tensorflow.
+
+**Disclaimer: Some of the implementad model may not follows original paper accurately**
 
 ## Task:
 1. Classification
@@ -73,22 +75,27 @@ Source : [Kaggle](https://www.kaggle.com/amananandrai/ag-news-classification-dat
 
 #### IDN Tagged Corpus (id)
 Consist of more than 10000 instance of tokenized data along with its POS-TAG.
+
 Source : [Repo](https://github.com/famrashel/idn-tagged-corpus)
 
 #### Universal Dependencies ID (id)
 Universal dependencies dataset for indonesian language. The postag is taken from the UPOS column of the conllu file
+
 Source : [Repo](https://github.com/UniversalDependencies/UD_Indonesian-GSD)
 
 #### NER (id)
 NER Dataset for indonesian langauge
+
 Source : [Repo](https://github.com/khairunnisaor/idner-news-2k)
 
 #### Universal Dependencies EN (en)
 Universal dependencies dataset for english language. The postag is taken from the UPOS column of the conllu file
+
 Source : [Repo](https://github.com/UniversalDependencies/UD_English-EWT)
 
 #### NER (en)
 NER Dataset used on WNUT 2017
+
 Source : [Repo](https://github.com/leondz/emerging_entities_17) 
 
 ## Dependencies
@@ -130,6 +137,8 @@ Source : [Repo](https://github.com/leondz/emerging_entities_17)
 - [Text classification with Deep Learning](https://github.com/TobiasLee/Text-Classification)
 - [Attention Mechanism 1](https://github.com/uzaymacar/attention-mechanisms)
 - [Attention Mechanism 2](https://github.com/philipperemy/keras-attention-mechanism)
+- [TENER](https://github.com/fastnlp/TENER)
+- [Various NER Architecture](https://github.com/CLOVEXCWZ/NER_DEMO)
 
 ## Others:
 ### CRF Tokenizer
