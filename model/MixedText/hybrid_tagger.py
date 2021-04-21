@@ -4,11 +4,12 @@ from keras.layers import GlobalMaxPooling1D, Dense
 from keras.utils import to_categorical
 from keras.initializers import Constant, RandomUniform
 from keras.models import Model, Input
+from keras.metrics import Accuracy
 from tensorflow_addons.layers.crf import CRF
 import numpy as np
 
 from model.extras.crf_subclass_model import ModelWithCRFLoss
-from model.TransformerText.relative_transformer_block import TransformerBlock
+from model.TransformerText.transformer_block import TransformerBlock
 from model.base_crf_out_tagger import BaseCRFTagger
 
 
@@ -96,6 +97,10 @@ class DLHybridTagger(BaseCRFTagger):
         :param crf: bool, whether to use crf or softmax
         """
         super(DLHybridTagger, self).__init__(**kwargs)
+        if char_embed_type not in ["cnn", "rnn", "adatrans", None]:
+            raise ValueError("Invalid character embedding")
+        if main_layer_type not in ["rnn", "adatrans"]:
+            raise ValueError("Invalid main layer")
         self.word_length = word_length
         self.char_embed_size = char_embed_size
         self.ed = embedding_dropout
@@ -244,7 +249,7 @@ class DLHybridTagger(BaseCRFTagger):
         # Word Embebedding
         input_word_layer = Input(shape=(self.seq_length,), name="word")
         word_embed_block = Embedding(
-            self.vocab_size+1, self.word_embed_size,
+            self.vocab_size+1, self.embedding_size,
             input_length=self.seq_length,
             embeddings_initializer=self.embedding,
             mask_zero=True,
@@ -288,7 +293,9 @@ class DLHybridTagger(BaseCRFTagger):
             ))(self.model)
             self.model = Model(input_layer, out)
             self.model.summary()
-        self.model.compile(loss=self.loss, optimizer=self.optimizer)
+        self.model.compile(
+            loss=self.loss, optimizer=self.optimizer, metrics=[Accuracy()]
+        )
 
     def vectorize_input(self, inp_seq):
         """
@@ -351,7 +358,9 @@ class DLHybridTagger(BaseCRFTagger):
         self.init_inverse_indexes(X, y)
         if self.use_crf:
             self.compute_transition_matrix(y)
-        self.init_embedding()
+        self.embedding, self.embedding_size = self.init_embedding(
+            self.embedding_file, self.embedding_type, self.embedding_size
+        )
         self.init_model()
 
     def save_network(self, filepath, zipf):

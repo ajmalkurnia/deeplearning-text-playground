@@ -2,7 +2,7 @@ from keras.utils import to_categorical
 from keras.initializers import Constant
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import load_model
-from keras.callbacks import EarlyStopping
+from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 from common.word_vector import WE_TYPE
 
@@ -26,7 +26,7 @@ class BaseTagger():
         """
         Deep learning based sequence tagger.
         :param seq_length: int, maximum sequence length in a data
-        :param word_embed_size: int, the size of word level embedding,
+        :param embedding_size: int, the size of word level embedding,
             relevant when not using pretrained embedding file
         :param embedding_file: string, path to pretrained word embedding
         :param embedding_type: string, word embedding types:
@@ -89,43 +89,45 @@ class BaseTagger():
         self.label2idx = {ch: idx+1 for idx, ch in enumerate(sorted(label))}
         self.idx2label = {idx: ch for ch, idx in self.label2idx.items()}
 
-    def init_wv_embedding(self):
+    def init_wv_embedding(self, embedding_file, embedding_type):
         """
         Initialization of for Word embedding matrix
         UNK word will be initialized randomly
         """
-        wv_model = WE_TYPE[self.embedding_type].load_model(self.embedding_file)
-        self.word_embed_size = wv_model.size
+        wv_model = WE_TYPE[embedding_type].load_model(embedding_file)
+        embedding = np.zeros((self.vocab_size+1, wv_model.size), dtype=float)
 
-        self.embedding = np.zeros(
-            (self.vocab_size+1, wv_model.size), dtype=float
-        )
         for word, idx in self.word2idx.items():
-            self.embedding[idx, :] = wv_model.retrieve_vector(word)
+            embedding[idx, :] = wv_model.retrieve_vector(word)
+        return embedding, wv_model.size
 
     def init_onehot_embedding(self):
         """
         Initialization one hot vector the vocabulary
         """
-        self.embedding_size = len(self.vocab)
-        self.embedding = np.eye(
+        embedding = np.eye(
             self.vocab_size, dtype=np.int32
         )
+        return embedding, len(self.vocab)
 
-    def init_embedding(self):
+    def init_embedding(self, embedding_file, embedding_type, embedding_size):
         """
         Initialize argument for word embedding initializer
         """
-        if self.embedding_type in ["w2v", "ft"]:
-            self.init_wv_embedding()
-            self.embedding = Constant(self.embedding)
-        elif self.embedding_type == "onehot":
-            self.init_onehot_embedding()
-            self.embedding = Constant(self.embedding)
-        elif self.embedding_type == "custom":
-            self.embedding = Constant(self.embedding)
+        if embedding_type in ["w2v", "ft", "glove"]:
+            embedding, embedding_size = self.init_wv_embedding(
+                embedding_file, embedding_type
+            )
+            embedding = Constant(embedding)
+        elif embedding_type == "onehot":
+            embedding, embedding_size = self.init_onehot_embedding()
+            embedding = Constant(embedding)
+        elif embedding_type == "custom":
+            embedding = Constant(embedding)
         else:
-            self.embedding = self.embedding_type
+            embedding = embedding_type
+
+        return embedding, embedding_size
 
     def init_c2i(self):
         """
@@ -250,16 +252,21 @@ class BaseTagger():
         :param y: 2D list, training data label
         """
         self.init_inverse_indexes(X, y)
-        self.init_embedding()
+        self.embedding, self.embedding_size = self.init_embedding(
+            self.embedding_file, self.embedding_type, self.embedding_size
+        )
         self.init_model()
 
-    def train(self, X, y, n_epoch=10, valid_split=None, batch_size=128):
+    def train(
+        self, X, y, epoch=10, batch_size=128, validation_pair=None,
+        ckpoint_file=None
+    ):
         """
         Prepare input and label data for the input
         :param X: list of list of string, tokenized input corpus
         :param y: list of list of string, label sequence
-        :param n_epoch: int, number of training epoch
-        :param valid_split: tuple, validation data
+        :param epoch: int, number of training epoch
+        :param validation_pair: tuple, validation data
             shape: (X_validation, y_validation)
         :param batch_size: int, size of the batch
         :return history: output of the fit method
@@ -267,8 +274,11 @@ class BaseTagger():
         self.training_prep(X, y)
 
         X_train, y_train = self.prepare_data(X, y)
-        if valid_split:
-            valid_split = self.prepare_data(valid_split[0], valid_split[1])
+        callback = []
+        if validation_pair:
+            validation_pair = self.prepare_data(
+                validation_pair[0], validation_pair[1]
+            )
             es = EarlyStopping(
                 monitor="val_loss",
                 patience=10,
@@ -276,15 +286,20 @@ class BaseTagger():
                 mode="min",
                 restore_best_weights=True
             )
-            callback = [es]
-        else:
-            callback = []
+            callback.append(es)
+            if ckpoint_file:
+                checkpoint = ModelCheckpoint(
+                    ckpoint_file, monitor='val_accuracy', verbose=1,
+                    save_best_only=True, mode='max', period=2
+                )
+                callback.append(checkpoint)
+
         history = self.model.fit(
             X_train,
             y_train,
             batch_size=batch_size,
-            epochs=n_epoch,
-            validation_data=valid_split,
+            epochs=epoch,
+            validation_data=validation_pair,
             verbose=1,
             callbacks=callback
         )

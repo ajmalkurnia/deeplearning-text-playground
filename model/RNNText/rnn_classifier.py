@@ -21,6 +21,13 @@ class RNNClassifier(BaseClassifier):
         """
         # self.__doc__ = BaseClassifier.__doc__
         super(RNNClassifier, self).__init__(**kwargs)
+        if rnn_type not in ["lstm", "gru"]:
+            raise ValueError("Invalid RNN type")
+        valid_attention = ["dot", "scaled",
+                           "general", "location", "add", "self", None]
+        if attention not in valid_attention:
+            raise ValueError("Invalid attention mechanism")
+
         self.rnn_size = rnn_size
         self.rnn_type = rnn_type
         self.dropout = dropout

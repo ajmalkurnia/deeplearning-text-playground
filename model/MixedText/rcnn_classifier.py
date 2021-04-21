@@ -25,6 +25,9 @@ class RCNNClassifier(BaseClassifier):
 
         # self.__doc__ = self.__doc__ + BaseClassifier.__doc__
         super(RCNNClassifier, self).__init__(**kwargs)
+        if rnn_type not in ["lstm", "gru"]:
+            raise ValueError("Invalid RNN type")
+
         self.rnn_size = rnn_size
         self.rnn_type = rnn_type
         self.fcn_layers = fcn_layers

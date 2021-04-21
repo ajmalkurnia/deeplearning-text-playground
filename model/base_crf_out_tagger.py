@@ -88,7 +88,9 @@ class BaseCRFTagger(BaseTagger):
         :param y: 2D list, training data label
         """
         self.init_inverse_indexes(X, y)
-        self.init_embedding()
+        self.embedding, self.embedding_size = self.init_embedding(
+            self.embedding_file, self.embedding_type
+        )
         self.compute_transition_matrix(y)
         self.init_model()
 

@@ -1,6 +1,8 @@
 from keras.layers import Embedding, Concatenate, TimeDistributed
 from keras.layers import Dropout, Conv1D, Dense
+
 from keras.models import Model, Input
+from keras.metrics import Accuracy
 
 from model.base_tagger import BaseTagger
 
@@ -8,7 +10,10 @@ from model.base_tagger import BaseTagger
 class CNNTagger(BaseTagger):
     def __init__(
         self, embedding_dropout=0.5, pre_outlayer_dropout=0.5,
-        conv_layers=[[[128, 3], [128, 5]], [[256, 5]], [[256, 5]]], **kwargs
+        conv_layers=[[[128, 3], [128, 5]], [[256, 5]], [[256, 5]]],
+        domain_embedding_file=None, domain_embedding_type="glorot_normal",
+        domain_embedding_matrix=None, domain_embedding_size=100,
+        **kwargs
     ):
         """
         CNN based sequence tagger based on:
@@ -30,6 +35,10 @@ class CNNTagger(BaseTagger):
         self.ed = embedding_dropout
         self.pre_outlayer_dropout = pre_outlayer_dropout
         self.conv_layers = conv_layers
+        self.domain_embedding_file = domain_embedding_file
+        self.domain_embedding_type = domain_embedding_type
+        self.domain_embedding_matrix = domain_embedding_matrix
+        self.domain_embedding_size = domain_embedding_size
 
     def init_model(self):
         """
@@ -38,12 +47,22 @@ class CNNTagger(BaseTagger):
         # Word Embebedding
         input_layer = Input(shape=(self.seq_length,))
         embedding_layer = Embedding(
-            self.vocab_size+1, self.word_embed_size,
+            self.vocab_size+1, self.embedding_size,
             input_length=self.seq_length,
             embeddings_initializer=self.embedding,
             mask_zero=True,
         )
         embedding_layer = embedding_layer(input_layer)
+        domain_embedding_layer = Embedding(
+            self.vocab_size+1, self.domain_embedding_size,
+            input_length=self.seq_length,
+            embeddings_initializer=self.domain_embedding,
+            mask_zero=True,
+        )
+        domain_embedding_layer = domain_embedding_layer(input_layer)
+        embedding_layer = Concatenate()(
+            [embedding_layer, domain_embedding_layer]
+        )
         embedding_layer = Dropout(self.ed)(embedding_layer)
         x = None
         # CNN layer
@@ -70,7 +89,27 @@ class CNNTagger(BaseTagger):
 
         self.model = Model(input_layer, out)
         self.model.summary()
-        self.model.compile(loss=self.loss, optimizer=self.optimizer)
+        self.model.compile(
+            loss=self.loss, optimizer=self.optimizer, metrics=[Accuracy()]
+        )
+
+    def training_prep(self, X, y):
+        """
+        Initialized necessary class attributes for training
+
+        :param X: 2D list, training dataset in form of tokenized corpus
+        :param y: 2D list, training data label
+        """
+        self.init_inverse_indexes(X, y)
+        self.embedding, self.embedding_size = self.init_embedding(
+            self.embedding_file, self.embedding_type, self.embedding_size
+        )
+        domain_embedding = self.init_embedding(
+            self.domain_embedding_file, self.domain_embedding_type,
+            self.domain_embedding_size
+        )
+        self.domain_embedding, self.domain_embedding_size = domain_embedding
+        self.init_model()
 
     def get_class_param(self):
         class_param = {

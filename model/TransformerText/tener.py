@@ -2,12 +2,14 @@ from keras.layers import Dense, Dropout, Embedding, Input, TimeDistributed
 from keras.layers import GlobalMaxPooling1D, Concatenate
 from keras.initializers import Constant, RandomUniform
 from keras.models import Model
+from keras.metrics import Accuracy
+
 from tensorflow_addons.layers.crf import CRF
 import numpy as np
 
 from model.extras.crf_subclass_model import ModelWithCRFLoss
 from model.base_crf_out_tagger import BaseCRFTagger
-from model.TransformerText.relative_transformer_block import TransformerBlock
+from model.TransformerText.transformer_block import TransformerBlock
 
 
 class TENERTagger(BaseCRFTagger):
@@ -16,7 +18,7 @@ class TENERTagger(BaseCRFTagger):
         char_dim_ff=60, n_blocks=2, dim_ff=128, n_heads=6,
         attention_dim=256, fcn_layers=[(512, 0.3, "relu")],
         transformer_dropout=0.3, attention_dropout=0.5, embedding_dropout=0.5,
-        out_transformer_dropout=0.3, scale=1, **kwargs
+        out_transformer_dropout=0.3, scale=False, **kwargs
     ):
         """
         TENER tagger based on:
@@ -101,7 +103,7 @@ class TENERTagger(BaseCRFTagger):
         """
         input_word_layer = Input(shape=(self.seq_length,), name="word")
         word_embed_block = Embedding(
-            self.vocab_size+1, self.word_embed_size,
+            self.vocab_size+1, self.embedding_size,
             input_length=self.seq_length,
             embeddings_initializer=self.embedding,
             mask_zero=True,
@@ -115,8 +117,8 @@ class TENERTagger(BaseCRFTagger):
         self.model = Dense(self.attention_dim)(embed_block)
         for _ in range(self.n_blocks):
             self.model = TransformerBlock(
-                self.dim_ff, self.n_heads, self.attention_dim, self.td,
-                self.ad, self.scale
+                self.dim_ff, self.n_heads, self.td, self.attention_dim,
+                self.ad, "adaptive", self.scale
             )(self.model)
         self.model = Dropout(self.otd)(self.model)
         for units, do_rate, activation in self.fcn_layers:
@@ -131,7 +133,9 @@ class TENERTagger(BaseCRFTagger):
         self.model.summary()
         # Subclassing to properly compute crf loss
         self.model = ModelWithCRFLoss(self.model)
-        self.model.compile(optimizer=self.optimizer, loss=self.loss)
+        self.model.compile(
+            loss=self.loss, optimizer=self.optimizer, metrics=[Accuracy()]
+        )
 
     def vectorize_input(self, inp_seq):
         """

@@ -37,6 +37,14 @@ class ModelWithCRFLoss(tf.keras.Model):
 
         return tf.reduce_mean(crf_loss), internal_loss
 
+    def compute_metric(self, x, y, training=False):
+        y_pred = self(x, training=training)
+        seq, potentials, sequence_length, chain_kernel = y_pred
+        self.compiled_metrics.update_state(
+            y, seq, tf.sequence_mask(sequence_length, y.shape[1])
+        )
+        # return internal_metrics
+
     def train_step(self, data):
         x, y, sample_weight = unpack_data(data)
 
@@ -50,10 +58,21 @@ class ModelWithCRFLoss(tf.keras.Model):
         gradients = tape.gradient(total_loss, self.trainable_variables)
         self.optimizer.apply_gradients(
             zip(gradients, self.trainable_variables))
-
-        return {"loss": crf_loss, "internal_losses": internal_losses}
+        self.compute_metric(
+            x, y, training=True
+        )
+        ret_metric = {m.name: m.result() for m in self.metrics}
+        ret_metric["loss"] = crf_loss
+        ret_metric["internal_losses"] = internal_losses
+        return ret_metric
 
     def test_step(self, data):
         x, y, sample_weight = unpack_data(data)
         crf_loss, internal_losses = self.compute_loss(x, y, sample_weight)
-        return {"loss": crf_loss, "internal_losses": internal_losses}
+        self.compute_metric(
+            x, y
+        )
+        ret_metric = {m.name: m.result() for m in self.metrics}
+        ret_metric["loss"] = crf_loss
+        ret_metric["internal_losses"] = internal_losses
+        return ret_metric

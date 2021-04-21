@@ -41,6 +41,9 @@ class TransformerClassifier(BaseClassifier):
         """
         # self.__doc__ = BaseClassifier.__doc__
         super(TransformerClassifier, self).__init__(**kwargs)
+        if sequence_embedding not in ["global_avg", "cls"]:
+            raise ValueError("Invalid sequence embedding")
+
         self.n_blocks = n_blocks
         self.dim_ff = dim_ff
         self.dropout = dropout
@@ -61,7 +64,7 @@ class TransformerClassifier(BaseClassifier):
         )(input_layer)
         for _ in range(self.n_blocks):
             self.model = TransformerBlock(
-                self.dim_ff, self.dropout, self.n_heads, self.attention_dim
+                self.dim_ff, self.n_heads, self.attention_dim, self.dropout
             )(self.model)
 
         if self.sequence_embedding == "cls":

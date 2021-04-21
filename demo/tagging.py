@@ -1,6 +1,12 @@
 from model.CNNText.cnn_tagger import CNNTagger
+from model.MixedText.hybrid_tagger import DLHybridTagger
+from model.CNNText.idcnn_tagger import IDCNNTagger
+from model.RNNText.rnn_rnn_tagger import StackedRNNTagger
+from model.TransformerText.tener import TENERTagger
+from common.configuration import get_config
+
 from sklearn.metrics import classification_report
-from keras.optimizers import Adam
+
 import logging
 
 
@@ -15,37 +21,39 @@ def evaluate(pred, ref):
     return report
 
 
+TAGGER = {
+    "cnn": CNNTagger,
+    "hybrid": DLHybridTagger,
+    "idcnn": IDCNNTagger,
+    "rnn": StackedRNNTagger,
+    "tener": TENERTagger
+}
+
+
 def main(args, data):
     logging.getLogger(__name__)
 
     logging.info("Parse dataset")
     train, test, valid = data.get_data()
-    # The original paper uses 2 concatenated word embedding,
-    # general and corpus specific
+    tagger = TAGGER[args.architecture]
+
     if args.loadmodel:
         logging.info("Load model")
-        hybrid_tagger = CNNTagger.load(args.loadmodel)
+        tagger = tagger.load(args.loadmodel)
     else:
-        logging.info("CNN tagger Training")
-        class_parameter = {
-            "embedding_file": args.embeddingfile,
-            "embedding_type": args.embeddingtype,
-            "seq_length": data.get_sequence_length(),
-            "embedding_dropout": args.embeddingdropout,
-            "pre_outlayer_dropout": args.preoutputdropout,
-            "optimizer": Adam(lr=0.0001)
-        }
-
-        hybrid_tagger = CNNTagger(**class_parameter)
-        hybrid_tagger.train(
-            train[0], train[1], args.epoch, valid
+        logging.info(f"{args.architecture} tagger Training")
+        class_parameter = get_config(data, args)
+        tagger = tagger(**class_parameter)
+        tagger.train(
+            train[0], train[1], args.epoch, args.batchsize, valid,
+            args.checkpoint
         )
     logging.info("Prediction")
-    y_pred = hybrid_tagger.predict(test[0])
+    y_pred = tagger.predict(test[0])
 
     report = evaluate(y_pred, test[1])
     logging.info("Evaluation Results")
     logging.info(f"\n{report}")
     if args.savemodel:
         logging.info("Save model")
-        hybrid_tagger.save(args.savemodel)
+        tagger.save(args.savemodel)

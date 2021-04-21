@@ -1,6 +1,7 @@
 from keras.layers import LSTM, Embedding, TimeDistributed, Concatenate, Add
 from keras.layers import Dropout, Bidirectional, Dense
 from keras.models import Model, Input
+from keras.metrics import Accuracy
 
 from model.AttentionText.attention_text import CharTagAttention
 from model.base_tagger import BaseTagger
@@ -65,7 +66,7 @@ class StackedRNNTagger(BaseTagger):
             self.char_rnn_units, self.word_length
         )(embedding_block)
         embedding_block = Concatenate()([embedding_block, c])
-        embedding_block = Dense(self.word_embed_size)(embedding_block)
+        embedding_block = Dense(self.embedding_size)(embedding_block)
 
         embedding_block = Model(
             inputs=word_input_layer, outputs=embedding_block)
@@ -83,7 +84,7 @@ class StackedRNNTagger(BaseTagger):
         # Word Embebedding
         input_word_layer = Input(shape=(self.seq_length,), name="word")
         pre_trained_word_embed = Embedding(
-            self.vocab_size+1, self.word_embed_size,
+            self.vocab_size+1, self.embedding_size,
             input_length=self.seq_length,
             embeddings_initializer=self.embedding,
             mask_zero=True,
@@ -91,7 +92,7 @@ class StackedRNNTagger(BaseTagger):
         )
         pre_trained_word_embed = pre_trained_word_embed(input_word_layer)
         learnable_word_embed = Embedding(
-            self.vocab_size+1, self.word_embed_size,
+            self.vocab_size+1, self.embedding_size,
             input_length=self.seq_length,
             embeddings_initializer="glorot_uniform",
             mask_zero=True
@@ -124,7 +125,9 @@ class StackedRNNTagger(BaseTagger):
 
         self.model = Model(input_layer, out)
         self.model.summary()
-        self.model.compile(loss=self.loss, optimizer=self.optimizer)
+        self.model.compile(
+            loss=self.loss, optimizer=self.optimizer, metrics=[Accuracy()]
+        )
 
     def vectorize_input(self, inp_seq):
         """
