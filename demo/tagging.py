@@ -2,6 +2,7 @@ from model.CNNText.cnn_tagger import CNNTagger
 from model.MixedText.hybrid_tagger import DLHybridTagger
 from model.CNNText.idcnn_tagger import IDCNNTagger
 from model.RNNText.rnn_rnn_tagger import StackedRNNTagger
+from model.RNNText.meta_bilstm_tagger import MetaBiLSTMTagger
 from model.TransformerText.tener import TENERTagger
 from common.configuration import get_config
 
@@ -26,7 +27,8 @@ TAGGER = {
     "hybrid": DLHybridTagger,
     "idcnn": IDCNNTagger,
     "rnn": StackedRNNTagger,
-    "tener": TENERTagger
+    "tener": TENERTagger,
+    "metalstm": MetaBiLSTMTagger
 }
 
 

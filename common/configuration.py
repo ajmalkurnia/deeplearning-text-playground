@@ -128,6 +128,19 @@ ARCHITECTURE_CONFIG = {
             "fcn_layers": [(512, 0.3, "relu")],
             "out_transformer_dropout": 0.3,
             "scale": False
+        },
+        "metalstm": {
+            "char_seq_length": 550,
+            "char_embedding_size": 100,
+            "char_rnn_units": 100,
+            "char_rd": 0.5,
+            "char_dense": 256,
+            "word_rnn_units": 100,
+            "word_rd": 0.5,
+            "word_dense": 256,
+            "meta_rnn_units": 100,
+            "meta_rd": 0.5,
+            "meta_dense": 256,
         }
     }
 }

@@ -15,6 +15,7 @@ def get_args():
     subparser = hybrid_tagger_args(subparser)
     subparser.add_parser("idcnn", help="Run IDCNN model")
     subparser.add_parser("tener", help="Run TENER model")
+    subparser.add_parser("metalstm", help="Run META-BiLSTM model")
     return parser
 
 
