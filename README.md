@@ -25,7 +25,8 @@ Playing with some deep learning for various text proccesing task, mainly using k
    4. CNN-BiLSTM-CRF
    5. BiLSTM-CRF
    6. BiLSTM-BiLSTM-CRF
-   7. Transformer (TENER)
+   7. Transformer (TENER) (slightly modified)
+   8. Meta Bi-LSTM (slightly modified)
 
 ## Demo:
 - Data format is a two column csv with header:
@@ -122,7 +123,8 @@ Source : [Repo](https://github.com/leondz/emerging_entities_17)
 - CNN-BiLSTM-CRF [Ma X., 2016](https://www.aclweb.org/anthology/P16-1101/)
 - BiLSTM-BiLSTM-CRF [Lample G., 2016](https://www.aclweb.org/anthology/N16-1030/)
 - LSTM-Attention-BiLSTM [Dozat T., 2017](https://www.aclweb.org/anthology/K17-3002/)
-- TENER [Yan H., 2019](https://www.aclweb.org/anthology/K17-3002/)
+- TENER [Yan H., 2019](https://arxiv.org/abs/1911.04474)
+- META BiLSTM [Bohnet B., 2018](https://www.aclweb.org/anthology/P18-1246/)
 
 ### Web Articles
 - [CNN classification 1](https://cezannec.github.io/CNN_Text_Classification/): More thorough explanation 

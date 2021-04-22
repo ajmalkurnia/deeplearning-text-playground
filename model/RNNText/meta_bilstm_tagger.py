@@ -94,7 +94,7 @@ class MetaModelWrapper(Model):
 
         with tf.GradientTape() as ctape:
             c_embed = self.char_model(X["char"])
-            c_pred = self.word_out(c_embed)
+            c_pred = self.char_out(c_embed)
             # c_pred = weights here
             c_loss = self.loss_fn(y, c_pred)
         cgrads = ctape.gradient(c_loss, self.char_model.trainable_weights)
@@ -126,11 +126,11 @@ class MetaModelWrapper(Model):
     def test_step(self, inp_seq):
         X, y = inp_seq
 
-        w_pred = self.word_model(X["word"])
-        w_embed = self.word_model.layer[-2].output
+        w_embed = self.word_model(X["word"])
+        w_pred = self.word_out(w_embed)
         w_loss = self.loss_fn(y, w_pred)
-        c_pred = self.char_model(X["char"])
-        c_embed = self.char_model.layer[-2].output
+        c_embed = self.char_model(X["char"])
+        c_pred = self.char_out(c_embed)
         c_loss = self.loss_fn(y, c_pred)
         m_input = tf.concat([w_embed, c_embed])
         m_pred = self.meta_model(m_input)
