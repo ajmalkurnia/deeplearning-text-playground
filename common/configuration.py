@@ -10,7 +10,7 @@ BASE_CONFIG = {
 
 
 OPTIMIZER_CONFIG = {
-    "learning_rate": 0.001,
+    "learning_rate": 0.0005,
     "clipvalue": None,
     "momentum": 0.9,  # SGD only
     "beta_1": 0.9,  # Adam & Nadam
@@ -131,16 +131,16 @@ ARCHITECTURE_CONFIG = {
         },
         "metalstm": {
             "char_seq_length": 550,
-            "char_embedding_size": 100,
-            "char_rnn_units": 100,
-            "char_rd": 0.5,
-            "char_dense": 256,
-            "word_rnn_units": 100,
-            "word_rd": 0.5,
-            "word_dense": 256,
-            "meta_rnn_units": 100,
-            "meta_rd": 0.5,
-            "meta_dense": 256,
+            "char_embedding_size": 200,
+            "char_rnn_units": 200,
+            "char_rd": 0.33,
+            "char_dense": 512,
+            "word_rnn_units": 200,
+            "word_rd": 0.33,
+            "word_dense": 512,
+            "meta_rnn_units": 200,
+            "meta_rd": 0.33,
+            "meta_dense": 512,
         }
     }
 }

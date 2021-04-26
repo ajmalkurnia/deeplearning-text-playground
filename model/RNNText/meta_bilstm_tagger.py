@@ -1,5 +1,5 @@
 from keras.layers import Embedding, Input, Bidirectional, LSTM, Dense
-from keras.layers import Layer, Concatenate
+from keras.layers import Layer, Concatenate, Add, Dropout
 from keras.metrics import Mean
 from keras.models import Model
 from keras.losses import CategoricalCrossentropy
@@ -61,6 +61,14 @@ class MetaModelWrapper(Model):
         self.char_out = Dense(target_label)
         self.word_out = Dense(target_label)
 
+    def call(self, input_data):
+        X = input_data
+        w_embed = self.word_model(X["word"])
+        c_embed = self.char_model(X["char"])
+        m_input = tf.concat([c_embed, w_embed], axis=-1)
+        m_pred = self.meta_model(m_input)
+        return m_pred
+
     def compile(
         self, char_optimizer, word_optimizer, meta_optimizer, loss,
         **kwargs  # , metric
@@ -79,8 +87,8 @@ class MetaModelWrapper(Model):
     def metrics(self):
         return [self.c_loss, self.w_loss, self.m_loss]
 
-    def train_step(self, inp_seq):
-        X, y = inp_seq
+    def train_step(self, input_data):
+        X, y = input_data
 
         with tf.GradientTape() as wtape:
             w_embed = self.word_model(X["word"])
@@ -103,8 +111,7 @@ class MetaModelWrapper(Model):
         )
 
         m_input = tf.concat([c_embed, w_embed], axis=-1)
-        with tf.GradientTape(watch_accessed_variables=False) as tape:
-            tape.watch(self.meta_model.trainable_variables)
+        with tf.GradientTape() as tape:
             m_pred = self.meta_model(m_input)
             m_loss = self.loss_fn(y, m_pred)
         grads = tape.gradient(
@@ -123,8 +130,8 @@ class MetaModelWrapper(Model):
             "loss": self.m_loss.result()
         }
 
-    def test_step(self, inp_seq):
-        X, y = inp_seq
+    def test_step(self, input_data):
+        X, y = input_data
 
         w_embed = self.word_model(X["word"])
         w_pred = self.word_out(w_embed)
@@ -132,7 +139,7 @@ class MetaModelWrapper(Model):
         c_embed = self.char_model(X["char"])
         c_pred = self.char_out(c_embed)
         c_loss = self.loss_fn(y, c_pred)
-        m_input = tf.concat([w_embed, c_embed])
+        m_input = tf.concat([c_embed, w_embed], axis=-1)
         m_pred = self.meta_model(m_input)
         m_loss = self.loss_fn(y, m_pred)
 
@@ -150,8 +157,9 @@ class MetaModelWrapper(Model):
 class MetaBiLSTMTagger(BaseTagger):
     def __init__(
         self, char_seq_length=550, char_embedding_size=100, char_rnn_units=100,
-        char_rd=0.5, char_dense=256, word_rnn_units=100, word_rd=0.5,
-        word_dense=256, meta_rnn_units=100, meta_rd=0.5, meta_dense=256,
+        char_rd=0.5, char_ed=0.5, char_dense=256, word_rnn_units=100,
+        word_rd=0.5, word_dense=256, word_ed=0.5,
+        meta_rnn_units=100, meta_rd=0.5, meta_ed=0.5, meta_dense=256,
         **kwargs
     ):
         super(MetaBiLSTMTagger, self).__init__(**kwargs)
@@ -159,12 +167,15 @@ class MetaBiLSTMTagger(BaseTagger):
         self.char_embedding_size = char_embedding_size
         self.char_rnn_units = char_rnn_units
         self.char_rd = char_rd
+        self.char_ed = char_ed
         self.char_dense = char_dense
         self.word_rnn_units = word_rnn_units
         self.word_rd = word_rd
+        self.word_ed = word_ed
         self.word_dense = word_dense
         self.meta_rnn_units = meta_rnn_units
         self.meta_rd = meta_rd
+        self.meta_ed = meta_ed
         self.meta_dense = meta_dense
 
     def init_word_model(self):
@@ -173,8 +184,18 @@ class MetaBiLSTMTagger(BaseTagger):
             self.vocab_size+1, self.embedding_size,
             input_length=self.seq_length,
             embeddings_initializer=self.embedding,
-            mask_zero=True
+            mask_zero=True,
+            trainable=False
         )(input_layer)
+        embedding_layer2 = Embedding(
+            self.vocab_size+1, self.embedding_size,
+            input_length=self.seq_length,
+            embeddings_initializer="glorot_normal",
+            mask_zero=True,
+            trainable=True
+        )(input_layer)
+        embedding_layer = Add()([embedding_layer, embedding_layer2])
+        embedding_layer = Dropout(self.word_ed)(embedding_layer)
         lstm = Bidirectional(LSTM(
             self.word_rnn_units, return_sequences=True,
             recurrent_dropout=self.word_rd
@@ -195,6 +216,7 @@ class MetaBiLSTMTagger(BaseTagger):
             embeddings_initializer="glorot_normal",
             mask_zero=True
         )(input_layer)
+        embedding_layer = Dropout(self.char_ed)(embedding_layer)
         lstm = Bidirectional(LSTM(
             self.char_rnn_units, return_sequences=True,
             recurrent_dropout=self.char_rd
@@ -224,6 +246,7 @@ class MetaBiLSTMTagger(BaseTagger):
             self.meta_rnn_units, return_sequences=True,
             recurrent_dropout=self.meta_rd
         ))(input_layer)
+        lstm = Dropout(self.meta_ed)(lstm)
         dense = Dense(self.meta_dense, activation="relu")(lstm)
         out = Dense(self.n_label+1)(dense)
         # For classification
